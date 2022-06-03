@@ -36,7 +36,7 @@ function getMapsScripts() {
     return scripts;
 }
 exports.getMapsScripts = getMapsScripts;
-function getMapsOptimizers(logs = true, distFolder = "dist") {
+function getMapsOptimizers(logs = true, distFolder = "./dist") {
     const maps = getMapsLinks();
     const plugins = [];
     for (const map of maps) {

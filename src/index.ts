@@ -43,7 +43,7 @@ export function getMapsScripts(): { [entryAlias: string]: string } {
     return scripts;
 }
 
-export function getMapsOptimizers(logs = true, distFolder = "dist"): PluginOption[] {
+export function getMapsOptimizers(logs = true, distFolder = "./dist"): PluginOption[] {
     const maps = getMapsLinks();
     const plugins: PluginOption[] = [];
 
