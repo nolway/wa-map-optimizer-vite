@@ -36,13 +36,13 @@ function getMapsScripts() {
     return scripts;
 }
 exports.getMapsScripts = getMapsScripts;
-function getMapsOptimizers(distFolder = "dist") {
+function getMapsOptimizers(logs = true, distFolder = "dist") {
     const maps = getMapsLinks();
     const plugins = [];
     for (const map of maps) {
         const mapName = path_1.default.parse(map).name;
         plugins.push(mapOptimizer(map, distFolder, {
-            logs: false,
+            logs: logs,
             output: {
                 path: distFolder,
                 map: {

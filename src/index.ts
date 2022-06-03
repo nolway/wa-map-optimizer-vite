@@ -43,7 +43,7 @@ export function getMapsScripts(): { [entryAlias: string]: string } {
     return scripts;
 }
 
-export function getMapsOptimizers(distFolder = "dist"): PluginOption[] {
+export function getMapsOptimizers(logs = true, distFolder = "dist"): PluginOption[] {
     const maps = getMapsLinks();
     const plugins: PluginOption[] = [];
 
@@ -51,7 +51,7 @@ export function getMapsOptimizers(distFolder = "dist"): PluginOption[] {
         const mapName = path.parse(map).name;
         plugins.push(
             mapOptimizer(map, distFolder, {
-                logs: false,
+                logs: logs,
                 output: {
                     path: distFolder,
                     map: {
