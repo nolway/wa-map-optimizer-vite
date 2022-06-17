@@ -80,10 +80,6 @@ function mapOptimizer(mapPath, distFolder, optimizeOptions) {
             if (!fs_1.default.existsSync(distFolder)) {
                 throw new Error(`Cannot find ${distFolder} build folder`);
             }
-            const assetsFolder = `${distFolder}/assets`;
-            if (!fs_1.default.existsSync(assetsFolder)) {
-                throw new Error(`Cannot find ${assetsFolder} assets build folder`);
-            }
             if (!fs_1.default.existsSync(optimizedMapFilePath)) {
                 throw new Error(`Unknown optimized map file on: ${optimizedMapFilePath}`);
             }
@@ -108,6 +104,10 @@ function mapOptimizer(mapPath, distFolder, optimizeOptions) {
             const scriptProperty = map.properties.find((property) => property.name === "script");
             if (!scriptProperty || typeof scriptProperty.value !== "string") {
                 return;
+            }
+            const assetsFolder = `${distFolder}/assets`;
+            if (!fs_1.default.existsSync(assetsFolder)) {
+                throw new Error(`Cannot find ${assetsFolder} assets build folder`);
             }
             const scriptName = path_1.default.parse(scriptProperty.value).name;
             const fileName = fs_1.default.readdirSync(assetsFolder).filter((asset) => asset.startsWith(scriptName));

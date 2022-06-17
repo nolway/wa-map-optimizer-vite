@@ -96,12 +96,6 @@ function mapOptimizer(mapPath: string, distFolder: string, optimizeOptions: Opti
                 throw new Error(`Cannot find ${distFolder} build folder`);
             }
 
-            const assetsFolder = `${distFolder}/assets`;
-
-            if (!fs.existsSync(assetsFolder)) {
-                throw new Error(`Cannot find ${assetsFolder} assets build folder`);
-            }
-
             if (!fs.existsSync(optimizedMapFilePath)) {
                 throw new Error(`Unknown optimized map file on: ${optimizedMapFilePath}`);
             }
@@ -133,6 +127,12 @@ function mapOptimizer(mapPath: string, distFolder: string, optimizeOptions: Opti
 
             if (!scriptProperty || typeof scriptProperty.value !== "string") {
                 return;
+            }
+
+            const assetsFolder = `${distFolder}/assets`;
+
+            if (!fs.existsSync(assetsFolder)) {
+                throw new Error(`Cannot find ${assetsFolder} assets build folder`);
             }
 
             const scriptName = path.parse(scriptProperty.value).name;
