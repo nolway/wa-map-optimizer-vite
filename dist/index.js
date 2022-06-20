@@ -36,27 +36,35 @@ function getMapsScripts() {
     return scripts;
 }
 exports.getMapsScripts = getMapsScripts;
-function getMapsOptimizers(logs = true, distFolder = "./dist") {
+function getMapsOptimizers(options) {
     const maps = getMapsLinks();
     const plugins = [];
+    const distFolder = options?.output?.path ?? "./dist";
     for (const map of maps) {
         const mapName = path_1.default.parse(map).name;
-        plugins.push(mapOptimizer(map, distFolder, {
-            logs: logs,
+        const optionsParsed = options ?? {
+            logs: 1,
             output: {
                 path: distFolder,
                 map: {
                     name: mapName,
                 },
                 tileset: {
-                    name: `${mapName}-chunk`,
                     size: {
                         height: 2048,
                         width: 2048,
                     },
                 },
             },
-        }));
+        };
+        if (!optionsParsed.output) {
+            optionsParsed.output = {};
+        }
+        if (!optionsParsed.output.tileset) {
+            optionsParsed.output.tileset = {};
+        }
+        optionsParsed.output.tileset.name = `${mapName}-chunk`;
+        plugins.push(mapOptimizer(map, distFolder, optionsParsed));
     }
     return plugins;
 }
@@ -68,7 +76,7 @@ function mapOptimizer(mapPath, distFolder, optimizeOptions) {
         load() {
             this.addWatchFile(mapPath);
         },
-        async closeBundle() {
+        async writeBundle() {
             await (0, wa_map_optimizer_1.optimize)(mapPath, optimizeOptions);
             const mapName = path_1.default.parse(mapPath).name;
             const optimizedMapFilePath = `${distFolder}/${mapName}.json`;
