@@ -118,7 +118,9 @@ function mapOptimizer(mapPath, distFolder, optimizeOptions) {
                 throw new Error(`Cannot find ${assetsFolder} assets build folder`);
             }
             const scriptName = path_1.default.parse(scriptProperty.value).name;
-            const fileName = fs_1.default.readdirSync(assetsFolder).filter((asset) => asset.startsWith(scriptName));
+            const fileName = fs_1.default
+                .readdirSync(assetsFolder)
+                .filter((asset) => asset.match(new RegExp(`^${scriptName}\\..*\\.js$`)));
             if (!fileName) {
                 throw new Error(`Undefined ${fileName} script file`);
             }
