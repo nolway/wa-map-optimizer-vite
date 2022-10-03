@@ -8,7 +8,7 @@ import { isMap } from "wa-map-optimizer/dist/guards/mapGuards";
 
 function getMapsLinks() {
     return fs.readdirSync(".").filter((file) => {
-        if (!file.endsWith(".json")) {
+        if (!file.endsWith(".json") && !file.endsWith(".tmj")) {
             return false;
         }
 
@@ -93,7 +93,8 @@ function mapOptimizer(mapPath: string, distFolder: string, optimizeOptions: Opti
             await optimize(mapPath, optimizeOptions);
 
             const mapName = path.parse(mapPath).name;
-            const optimizedMapFilePath = `${distFolder}/${mapName}.json`;
+            const mapExtension = path.parse(mapPath).ext;
+            const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
 
             const mapFile = await fs.promises.readFile(mapPath);
             const map = isMap.parse(JSON.parse(mapFile.toString()));

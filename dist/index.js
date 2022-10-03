@@ -10,7 +10,7 @@ const wa_map_optimizer_1 = require("wa-map-optimizer");
 const mapGuards_1 = require("wa-map-optimizer/dist/guards/mapGuards");
 function getMapsLinks() {
     return fs_1.default.readdirSync(".").filter((file) => {
-        if (!file.endsWith(".json")) {
+        if (!file.endsWith(".json") && !file.endsWith(".tmj")) {
             return false;
         }
         const object = JSON.parse(fs_1.default.readFileSync(file).toString());
@@ -79,7 +79,8 @@ function mapOptimizer(mapPath, distFolder, optimizeOptions) {
         async writeBundle() {
             await (0, wa_map_optimizer_1.optimize)(mapPath, optimizeOptions);
             const mapName = path_1.default.parse(mapPath).name;
-            const optimizedMapFilePath = `${distFolder}/${mapName}.json`;
+            const mapExtension = path_1.default.parse(mapPath).ext;
+            const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
             const mapFile = await fs_1.default.promises.readFile(mapPath);
             const map = mapGuards_1.isMap.parse(JSON.parse(mapFile.toString()));
             if (!map?.properties) {
