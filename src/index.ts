@@ -6,19 +6,35 @@ import { optimize } from "wa-map-optimizer";
 import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards";
 import { isMap } from "wa-map-optimizer/dist/guards/mapGuards";
 
-function getMapsLinks() {
-    return fs.readdirSync(".").filter((file) => {
-        if (!file.endsWith(".json") && !file.endsWith(".tmj")) {
-            return false;
-        }
+function getMapsLinks(mapDirectory?: string): string[] {
+    const mapFiles: string[] = [];
 
-        const object = JSON.parse(fs.readFileSync(file).toString());
-        return isMap.safeParse(object).success;
-    });
+    for (const file of fs.readdirSync(mapDirectory ?? ".")) {
+        const fullPath = mapDirectory + "/" + file;
+        if (mapDirectory && fs.lstatSync(fullPath).isDirectory()) {
+            mapFiles.push(...getMapsLinks(fullPath));
+        } else {
+            if (!isMapFile(fullPath)) {
+                continue;
+            }
+            mapFiles.push(fullPath);
+        }
+    }
+
+    return mapFiles;
 }
 
-export function getMapsScripts(): { [entryAlias: string]: string } {
-    const maps = getMapsLinks();
+function isMapFile(filePath: string): boolean {
+    if (!filePath.endsWith(".json") && !filePath.endsWith(".tmj")) {
+        return false;
+    }
+
+    const object = JSON.parse(fs.readFileSync(filePath).toString());
+    return isMap.safeParse(object).success;
+}
+
+export function getMapsScripts(mapDirectory?: string): { [entryAlias: string]: string } {
+    const maps = getMapsLinks(mapDirectory);
     const scripts: { [entryAlias: string]: string } = {};
 
     for (const map of maps) {
@@ -43,8 +59,8 @@ export function getMapsScripts(): { [entryAlias: string]: string } {
     return scripts;
 }
 
-export function getMapsOptimizers(options?: OptimizeOptions): PluginOption[] {
-    const maps = getMapsLinks();
+export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: string): PluginOption[] {
+    const maps = getMapsLinks(mapDirectory);
     const plugins: PluginOption[] = [];
     const distFolder = options?.output?.path ?? "./dist";
 

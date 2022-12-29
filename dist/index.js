@@ -8,17 +8,31 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const wa_map_optimizer_1 = require("wa-map-optimizer");
 const mapGuards_1 = require("wa-map-optimizer/dist/guards/mapGuards");
-function getMapsLinks() {
-    return fs_1.default.readdirSync(".").filter((file) => {
-        if (!file.endsWith(".json") && !file.endsWith(".tmj")) {
-            return false;
+function getMapsLinks(mapDirectory) {
+    const mapFiles = [];
+    for (const file of fs_1.default.readdirSync(mapDirectory ?? ".")) {
+        const fullPath = mapDirectory + "/" + file;
+        if (mapDirectory && fs_1.default.lstatSync(fullPath).isDirectory()) {
+            mapFiles.push(...getMapsLinks(fullPath));
         }
-        const object = JSON.parse(fs_1.default.readFileSync(file).toString());
-        return mapGuards_1.isMap.safeParse(object).success;
-    });
+        else {
+            if (!isMapFile(fullPath)) {
+                continue;
+            }
+            mapFiles.push(fullPath);
+        }
+    }
+    return mapFiles;
 }
-function getMapsScripts() {
-    const maps = getMapsLinks();
+function isMapFile(filePath) {
+    if (!filePath.endsWith(".json") && !filePath.endsWith(".tmj")) {
+        return false;
+    }
+    const object = JSON.parse(fs_1.default.readFileSync(filePath).toString());
+    return mapGuards_1.isMap.safeParse(object).success;
+}
+function getMapsScripts(mapDirectory) {
+    const maps = getMapsLinks(mapDirectory);
     const scripts = {};
     for (const map of maps) {
         const object = JSON.parse(fs_1.default.readFileSync(map).toString());
@@ -36,8 +50,8 @@ function getMapsScripts() {
     return scripts;
 }
 exports.getMapsScripts = getMapsScripts;
-function getMapsOptimizers(options) {
-    const maps = getMapsLinks();
+function getMapsOptimizers(options, mapDirectory) {
+    const maps = getMapsLinks(mapDirectory);
     const plugins = [];
     const distFolder = options?.output?.path ?? "./dist";
     for (const map of maps) {
