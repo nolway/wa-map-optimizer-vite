@@ -10,7 +10,7 @@ const wa_map_optimizer_1 = require("wa-map-optimizer");
 const mapGuards_1 = require("wa-map-optimizer/dist/guards/mapGuards");
 function getMapsLinks(mapDirectory) {
     const mapFiles = [];
-    const baseDir = mapDirectory ?? __dirname;
+    const baseDir = mapDirectory ?? ".";
     for (const file of fs_1.default.readdirSync(baseDir)) {
         const fullPath = baseDir + "/" + file;
         if (mapDirectory && fs_1.default.lstatSync(fullPath).isDirectory()) {

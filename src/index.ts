@@ -9,7 +9,7 @@ import { isMap } from "wa-map-optimizer/dist/guards/mapGuards";
 function getMapsLinks(mapDirectory?: string): string[] {
     const mapFiles: string[] = [];
 
-    const baseDir = mapDirectory ?? __dirname;
+    const baseDir = mapDirectory ?? ".";
 
     for (const file of fs.readdirSync(baseDir)) {
         const fullPath = baseDir + "/" + file;
