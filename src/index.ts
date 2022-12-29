@@ -92,7 +92,7 @@ export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: stri
 
         optionsParsed.output.tileset.prefix = `${mapName}-chunk`;
         optionsParsed.output.tileset.suffix = crypto
-            .createHash("shake256", { outputLength: 8 })
+            .createHash("shake256", { outputLength: 4 })
             .update(Date.now() + mapName)
             .digest("hex");
 

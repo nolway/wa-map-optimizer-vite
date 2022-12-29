@@ -78,7 +78,7 @@ function getMapsOptimizers(options, mapDirectory) {
         }
         optionsParsed.output.tileset.prefix = `${mapName}-chunk`;
         optionsParsed.output.tileset.suffix = crypto_1.default
-            .createHash("shake256", { outputLength: 8 })
+            .createHash("shake256", { outputLength: 4 })
             .update(Date.now() + mapName)
             .digest("hex");
         plugins.push(mapOptimizer(map, distFolder, optionsParsed));
