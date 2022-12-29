@@ -8,6 +8,7 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const wa_map_optimizer_1 = require("wa-map-optimizer");
 const mapGuards_1 = require("wa-map-optimizer/dist/guards/mapGuards");
+const crypto_1 = __importDefault(require("crypto"));
 function getMapsLinks(mapDirectory) {
     const mapFiles = [];
     const baseDir = mapDirectory ?? ".";
@@ -65,10 +66,7 @@ function getMapsOptimizers(options, mapDirectory) {
                     name: mapName,
                 },
                 tileset: {
-                    size: {
-                        height: 2048,
-                        width: 2048,
-                    },
+                    size: 1024,
                 },
             },
         };
@@ -78,7 +76,11 @@ function getMapsOptimizers(options, mapDirectory) {
         if (!optionsParsed.output.tileset) {
             optionsParsed.output.tileset = {};
         }
-        optionsParsed.output.tileset.name = `${mapName}-chunk`;
+        optionsParsed.output.tileset.prefix = `${mapName}-chunk`;
+        optionsParsed.output.tileset.suffix = crypto_1.default
+            .createHash("shake256", { outputLength: 8 })
+            .update(Date.now() + mapName)
+            .digest("hex");
         plugins.push(mapOptimizer(map, distFolder, optionsParsed));
     }
     return plugins;

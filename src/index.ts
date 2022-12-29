@@ -5,6 +5,7 @@ import type { Plugin } from "vite";
 import { optimize } from "wa-map-optimizer";
 import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards";
 import { isMap } from "wa-map-optimizer/dist/guards/mapGuards";
+import crypto from "crypto";
 
 function getMapsLinks(mapDirectory?: string): string[] {
     const mapFiles: string[] = [];
@@ -76,10 +77,7 @@ export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: stri
                     name: mapName,
                 },
                 tileset: {
-                    size: {
-                        height: 2048,
-                        width: 2048,
-                    },
+                    size: 1024,
                 },
             },
         };
@@ -92,7 +90,11 @@ export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: stri
             optionsParsed.output.tileset = {};
         }
 
-        optionsParsed.output.tileset.name = `${mapName}-chunk`;
+        optionsParsed.output.tileset.prefix = `${mapName}-chunk`;
+        optionsParsed.output.tileset.suffix = crypto
+            .createHash("shake256", { outputLength: 8 })
+            .update(Date.now() + mapName)
+            .digest("hex");
 
         plugins.push(mapOptimizer(map, distFolder, optionsParsed));
     }
