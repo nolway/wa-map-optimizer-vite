@@ -55,7 +55,7 @@ export function getMapsScripts(mapDirectory?: string): { [entryAlias: string]: s
 
         const scriptName = path.parse(scriptProperty.value).name;
 
-        scripts[scriptName] = scriptProperty.value;
+        scripts[scriptName] = path.resolve(path.dirname(map), scriptProperty.value);
     }
 
     return scripts;
@@ -167,10 +167,10 @@ function mapOptimizer(mapPath: string, distFolder: string, optimizeOptions: Opti
             const scriptName = path.parse(scriptProperty.value).name;
             const fileName = fs
                 .readdirSync(assetsFolder)
-                .filter((asset) => asset.match(new RegExp(`^${scriptName}\\..*\\.js$`)));
+                .find((asset) => asset.match(new RegExp(`^${scriptName}-.*.js$`)));
 
             if (!fileName) {
-                throw new Error(`Undefined ${fileName} script file`);
+                throw new Error(`Undefined ${scriptName} script file`);
             }
 
             for (const property of optimizedMap.properties) {

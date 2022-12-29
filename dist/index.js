@@ -46,7 +46,7 @@ function getMapsScripts(mapDirectory) {
             continue;
         }
         const scriptName = path_1.default.parse(scriptProperty.value).name;
-        scripts[scriptName] = scriptProperty.value;
+        scripts[scriptName] = path_1.default.resolve(path_1.default.dirname(map), scriptProperty.value);
     }
     return scripts;
 }
@@ -136,9 +136,9 @@ function mapOptimizer(mapPath, distFolder, optimizeOptions) {
             const scriptName = path_1.default.parse(scriptProperty.value).name;
             const fileName = fs_1.default
                 .readdirSync(assetsFolder)
-                .filter((asset) => asset.match(new RegExp(`^${scriptName}\\..*\\.js$`)));
+                .find((asset) => asset.match(new RegExp(`^${scriptName}-.*.js$`)));
             if (!fileName) {
-                throw new Error(`Undefined ${fileName} script file`);
+                throw new Error(`Undefined ${scriptName} script file`);
             }
             for (const property of optimizedMap.properties) {
                 if (property.name === "script") {
