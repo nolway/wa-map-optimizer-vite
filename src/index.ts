@@ -65,9 +65,14 @@ export function getMapsScripts(mapDirectory?: string): { [entryAlias: string]: s
 export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: string): PluginOption[] {
     const maps = getMapsLinks(mapDirectory);
     const plugins: PluginOption[] = [];
-    const distFolder = options?.output?.path ?? "./dist";
+    const baseDistPath = options?.output?.path ?? "./dist";
 
     for (const map of maps) {
+        const distFolder = path.join(
+            baseDistPath,
+            mapDirectory ?? "",
+            path.dirname(map.replace(new RegExp(`^${mapDirectory}`), ""))
+        );
         const mapName = path.parse(map).name;
         const optionsParsed: OptimizeOptions = options ?? {
             logs: 1,
@@ -96,14 +101,19 @@ export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: stri
             .update(Date.now() + mapName)
             .digest("hex");
 
-        plugins.push(mapOptimizer(map, distFolder, optionsParsed));
+        plugins.push(mapOptimizer(map, distFolder, optionsParsed, baseDistPath));
     }
 
     return plugins;
 }
 
 // Map Optimizer Vite Plugin
-function mapOptimizer(mapPath: string, distFolder: string, optimizeOptions: OptimizeOptions): Plugin {
+function mapOptimizer(
+    mapPath: string,
+    distFolder: string,
+    optimizeOptions: OptimizeOptions,
+    baseDistPath: string
+): Plugin {
     return {
         name: "map-optimizer",
         load() {
@@ -160,7 +170,7 @@ function mapOptimizer(mapPath: string, distFolder: string, optimizeOptions: Opti
                 return;
             }
 
-            const assetsFolder = `${distFolder}/assets`;
+            const assetsFolder = `${baseDistPath}/assets`;
 
             if (!fs.existsSync(assetsFolder)) {
                 throw new Error(`Cannot find ${assetsFolder} assets build folder`);
@@ -177,12 +187,14 @@ function mapOptimizer(mapPath: string, distFolder: string, optimizeOptions: Opti
 
             for (const property of optimizedMap.properties) {
                 if (property.name === "script") {
-                    property.value = `assets/${fileName}`;
+                    property.value = path.relative(distFolder, `${assetsFolder}/${fileName}`);
                     break;
                 }
             }
 
-            await fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
+            fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
+                fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
+            });
         },
     };
 }
