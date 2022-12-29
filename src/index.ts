@@ -9,8 +9,10 @@ import { isMap } from "wa-map-optimizer/dist/guards/mapGuards";
 function getMapsLinks(mapDirectory?: string): string[] {
     const mapFiles: string[] = [];
 
-    for (const file of fs.readdirSync(mapDirectory ?? ".")) {
-        const fullPath = mapDirectory + "/" + file;
+    const baseDir = mapDirectory ?? __dirname;
+
+    for (const file of fs.readdirSync(baseDir)) {
+        const fullPath = baseDir + "/" + file;
         if (mapDirectory && fs.lstatSync(fullPath).isDirectory()) {
             mapFiles.push(...getMapsLinks(fullPath));
         } else {
