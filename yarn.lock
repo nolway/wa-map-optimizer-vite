@@ -1857,10 +1857,10 @@ vite@^4.0.3:
   optionalDependencies:
     fsevents "~2.3.2"
 
-wa-map-optimizer@^1.3.1:
-  version "1.3.1"
-  resolved "https://registry.yarnpkg.com/wa-map-optimizer/-/wa-map-optimizer-1.3.1.tgz#2baa1237b8cd10be7f26abc9086b2b93b7ac6e89"
-  integrity sha512-LKnHacmxerUZP/WAdBs7gqPoHJyECn24ppq+NbVxsfojuoPL1dD9TsuY+byW/Cbn14M0MhiZGxveWbsOmIM9Ow==
+wa-map-optimizer@^1.3.2:
+  version "1.3.2"
+  resolved "https://registry.yarnpkg.com/wa-map-optimizer/-/wa-map-optimizer-1.3.2.tgz#52fa7d5d3fd3e7c4dc0c5aff79f8507dedbb432a"
+  integrity sha512-yRW+XapAO5cPlyb8OMCFEjwz84rwnROUUCAbsK7nuAjfGwik5A11kfrCWzQo5FQHylF4cm3fEtCTPNX9OMo7tw==
   dependencies:
     pngjs "^6.0.0"
     sharp "^0.30.4"

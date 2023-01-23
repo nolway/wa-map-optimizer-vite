@@ -65,7 +65,7 @@ export function getMapsScripts(mapDirectory?: string): { [entryAlias: string]: s
 export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: string): PluginOption[] {
     const maps = getMapsLinks(mapDirectory);
     const plugins: PluginOption[] = [];
-    const baseDistPath = options?.output?.path ?? "./dist";
+    const baseDistPath = options?.output?.path ?? "dist";
 
     for (const map of maps) {
         const distFolder = path.join(
@@ -74,17 +74,15 @@ export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: stri
             path.dirname(map.replace(new RegExp(`^${mapDirectory}`), ""))
         );
         const mapName = path.parse(map).name;
-        const optionsParsed: OptimizeOptions = options ?? {
+        const optionsParsed: OptimizeOptions = {
             logs: 1,
             output: {
                 path: distFolder,
                 map: {
                     name: mapName,
                 },
-                tileset: {
-                    size: 1024,
-                },
             },
+            ...options,
         };
 
         if (!optionsParsed.output) {

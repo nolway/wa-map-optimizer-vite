@@ -55,21 +55,19 @@ exports.getMapsScripts = getMapsScripts;
 function getMapsOptimizers(options, mapDirectory) {
     const maps = getMapsLinks(mapDirectory);
     const plugins = [];
-    const baseDistPath = options?.output?.path ?? "./dist";
+    const baseDistPath = options?.output?.path ?? "dist";
     for (const map of maps) {
         const distFolder = path_1.default.join(baseDistPath, mapDirectory ?? "", path_1.default.dirname(map.replace(new RegExp(`^${mapDirectory}`), "")));
         const mapName = path_1.default.parse(map).name;
-        const optionsParsed = options ?? {
+        const optionsParsed = {
             logs: 1,
             output: {
                 path: distFolder,
                 map: {
                     name: mapName,
                 },
-                tileset: {
-                    size: 1024,
-                },
             },
+            ...options,
         };
         if (!optionsParsed.output) {
             optionsParsed.output = {};
