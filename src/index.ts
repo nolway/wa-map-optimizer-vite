@@ -148,10 +148,12 @@ function mapOptimizer(
 
             const imageProperty = map.properties.find((property) => property.name === "mapImage");
 
-            if (imageProperty) {
-                if (typeof imageProperty.value === "string" && fs.existsSync(imageProperty.value)) {
-                    const newMapImageName = `${mapName}${path.parse(imageProperty.value).ext}`;
-                    await fs.promises.copyFile(imageProperty.value, `${distFolder}/${newMapImageName}`);
+            if (imageProperty && typeof imageProperty.value === "string") {
+                const imagePath = path.resolve(path.dirname(mapPath), imageProperty.value);
+
+                if (fs.existsSync(imagePath)) {
+                    const newMapImageName = `${mapName}${path.parse(imagePath).ext}`;
+                    await fs.promises.copyFile(imagePath, `${distFolder}/${newMapImageName}`);
 
                     for (const property of optimizedMap.properties) {
                         if (property.name === "mapImage") {

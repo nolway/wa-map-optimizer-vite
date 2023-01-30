@@ -114,10 +114,11 @@ function mapOptimizer(mapPath, distFolder, optimizeOptions, baseDistPath) {
                 throw new Error("Undefined properties on map optimized! Something was wrong!");
             }
             const imageProperty = map.properties.find((property) => property.name === "mapImage");
-            if (imageProperty) {
-                if (typeof imageProperty.value === "string" && fs_1.default.existsSync(imageProperty.value)) {
-                    const newMapImageName = `${mapName}${path_1.default.parse(imageProperty.value).ext}`;
-                    await fs_1.default.promises.copyFile(imageProperty.value, `${distFolder}/${newMapImageName}`);
+            if (imageProperty && typeof imageProperty.value === "string") {
+                const imagePath = path_1.default.resolve(path_1.default.dirname(mapPath), imageProperty.value);
+                if (fs_1.default.existsSync(imagePath)) {
+                    const newMapImageName = `${mapName}${path_1.default.parse(imagePath).ext}`;
+                    await fs_1.default.promises.copyFile(imagePath, `${distFolder}/${newMapImageName}`);
                     for (const property of optimizedMap.properties) {
                         if (property.name === "mapImage") {
                             property.value = newMapImageName;
