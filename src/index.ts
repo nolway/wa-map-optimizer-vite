@@ -3,52 +3,48 @@ import path from "path";
 import { PluginOption } from "vite";
 import type { Plugin } from "vite";
 import { optimize } from "wa-map-optimizer";
-import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards";
-import { isMap } from "wa-map-optimizer/dist/guards/mapGuards";
 import crypto from "crypto";
+import { ITiledMap } from "@workadventure/tiled-map-type-guard";
+import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards";
 
-function getMapsLinks(mapDirectory?: string): string[] {
-    const mapFiles: string[] = [];
+export function getMaps(mapDirectory = "."): Map<string, ITiledMap> {
+    let mapFiles = new Map<string, ITiledMap>();
 
-    const baseDir = mapDirectory ?? ".";
-
-    for (const file of fs.readdirSync(baseDir)) {
-        const fullPath = baseDir + "/" + file;
-        if (mapDirectory && fs.lstatSync(fullPath).isDirectory()) {
-            mapFiles.push(...getMapsLinks(fullPath));
+    for (const file of fs.readdirSync(mapDirectory)) {
+        const fullPath = mapDirectory + "/" + file;
+        if (mapDirectory && fs.lstatSync(fullPath).isDirectory() && file !== "dist" && file !== "node_modules") {
+            mapFiles = new Map([...mapFiles, ...getMaps(fullPath)]);
         } else {
-            if (!isMapFile(fullPath)) {
+            const map = isMapFile(fullPath);
+            if (!map) {
                 continue;
             }
-            mapFiles.push(fullPath);
+            mapFiles.set(fullPath, map);
         }
     }
 
     return mapFiles;
 }
 
-function isMapFile(filePath: string): boolean {
-    if (!filePath.endsWith(".json") && !filePath.endsWith(".tmj")) {
-        return false;
+function isMapFile(filePath: string): ITiledMap | undefined {
+    if (!filePath.endsWith(".tmj")) {
+        return undefined;
     }
 
     const object = JSON.parse(fs.readFileSync(filePath).toString());
-    return isMap.safeParse(object).success;
+    const mapFile = ITiledMap.safeParse(object);
+    return mapFile.success ? mapFile.data : undefined;
 }
 
-export function getMapsScripts(mapDirectory?: string): { [entryAlias: string]: string } {
-    const maps = getMapsLinks(mapDirectory);
+export function getMapsScripts(maps: Map<string, ITiledMap>): { [entryAlias: string]: string } {
     const scripts: { [entryAlias: string]: string } = {};
 
-    for (const map of maps) {
-        const object = JSON.parse(fs.readFileSync(map).toString());
-        const mapObject = isMap.parse(object);
-
-        if (!mapObject.properties) {
+    for (const [mapPath, map] of maps) {
+        if (!map.properties) {
             continue;
         }
 
-        const scriptProperty = mapObject.properties.find((property) => property.name === "script");
+        const scriptProperty = map.properties.find((property) => property.name === "script");
 
         if (!scriptProperty || typeof scriptProperty.value !== "string") {
             continue;
@@ -56,24 +52,23 @@ export function getMapsScripts(mapDirectory?: string): { [entryAlias: string]: s
 
         const scriptName = path.parse(scriptProperty.value).name;
 
-        scripts[scriptName] = path.resolve(path.dirname(map), scriptProperty.value);
+        scripts[scriptName] = path.resolve(path.dirname(mapPath), scriptProperty.value);
     }
 
     return scripts;
 }
 
-export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: string): PluginOption[] {
-    const maps = getMapsLinks(mapDirectory);
+export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: OptimizeOptions): PluginOption[] {
     const plugins: PluginOption[] = [];
     const baseDistPath = options?.output?.path ?? "dist";
 
-    for (const map of maps) {
-        const distFolder = path.join(
-            baseDistPath,
-            mapDirectory ?? "",
-            path.dirname(map.replace(new RegExp(`^${mapDirectory}`), ""))
-        );
-        const mapName = path.parse(map).name;
+    for (const [mapPath, map] of maps) {
+        const parsedMapPath = path.parse(mapPath);
+        const mapName = parsedMapPath.name;
+        const mapDirectory = parsedMapPath.dir;
+
+        const distFolder = path.join(baseDistPath, mapDirectory);
+
         const optionsParsed: OptimizeOptions = {
             logs: 1,
             output: {
@@ -99,7 +94,7 @@ export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: stri
             .update(Date.now() + mapName)
             .digest("hex");
 
-        plugins.push(mapOptimizer(map, distFolder, optionsParsed, baseDistPath));
+        plugins.push(mapOptimizer(mapPath, map, distFolder, optionsParsed, baseDistPath));
     }
 
     return plugins;
@@ -108,6 +103,7 @@ export function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: stri
 // Map Optimizer Vite Plugin
 function mapOptimizer(
     mapPath: string,
+    map: ITiledMap,
     distFolder: string,
     optimizeOptions: OptimizeOptions,
     baseDistPath: string
@@ -123,9 +119,6 @@ function mapOptimizer(
             const mapName = path.parse(mapPath).name;
             const mapExtension = path.parse(mapPath).ext;
             const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
-
-            const mapFile = await fs.promises.readFile(mapPath);
-            const map = isMap.parse(JSON.parse(mapFile.toString()));
 
             if (!map?.properties) {
                 return;

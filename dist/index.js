@@ -3,62 +3,62 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMapsOptimizers = exports.getMapsScripts = void 0;
+exports.getMapsOptimizers = exports.getMapsScripts = exports.getMaps = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const wa_map_optimizer_1 = require("wa-map-optimizer");
-const mapGuards_1 = require("wa-map-optimizer/dist/guards/mapGuards");
 const crypto_1 = __importDefault(require("crypto"));
-function getMapsLinks(mapDirectory) {
-    const mapFiles = [];
-    const baseDir = mapDirectory ?? ".";
-    for (const file of fs_1.default.readdirSync(baseDir)) {
-        const fullPath = baseDir + "/" + file;
-        if (mapDirectory && fs_1.default.lstatSync(fullPath).isDirectory()) {
-            mapFiles.push(...getMapsLinks(fullPath));
+const tiled_map_type_guard_1 = require("@workadventure/tiled-map-type-guard");
+function getMaps(mapDirectory = ".") {
+    let mapFiles = new Map();
+    for (const file of fs_1.default.readdirSync(mapDirectory)) {
+        const fullPath = mapDirectory + "/" + file;
+        if (mapDirectory && fs_1.default.lstatSync(fullPath).isDirectory() && file !== "dist" && file !== "node_modules") {
+            mapFiles = new Map([...mapFiles, ...getMaps(fullPath)]);
         }
         else {
-            if (!isMapFile(fullPath)) {
+            const map = isMapFile(fullPath);
+            if (!map) {
                 continue;
             }
-            mapFiles.push(fullPath);
+            mapFiles.set(fullPath, map);
         }
     }
     return mapFiles;
 }
+exports.getMaps = getMaps;
 function isMapFile(filePath) {
-    if (!filePath.endsWith(".json") && !filePath.endsWith(".tmj")) {
-        return false;
+    if (!filePath.endsWith(".tmj")) {
+        return undefined;
     }
     const object = JSON.parse(fs_1.default.readFileSync(filePath).toString());
-    return mapGuards_1.isMap.safeParse(object).success;
+    const mapFile = tiled_map_type_guard_1.ITiledMap.safeParse(object);
+    return mapFile.success ? mapFile.data : undefined;
 }
-function getMapsScripts(mapDirectory) {
-    const maps = getMapsLinks(mapDirectory);
+function getMapsScripts(maps) {
     const scripts = {};
-    for (const map of maps) {
-        const object = JSON.parse(fs_1.default.readFileSync(map).toString());
-        const mapObject = mapGuards_1.isMap.parse(object);
-        if (!mapObject.properties) {
+    for (const [mapPath, map] of maps) {
+        if (!map.properties) {
             continue;
         }
-        const scriptProperty = mapObject.properties.find((property) => property.name === "script");
+        const scriptProperty = map.properties.find((property) => property.name === "script");
         if (!scriptProperty || typeof scriptProperty.value !== "string") {
             continue;
         }
         const scriptName = path_1.default.parse(scriptProperty.value).name;
-        scripts[scriptName] = path_1.default.resolve(path_1.default.dirname(map), scriptProperty.value);
+        scripts[scriptName] = path_1.default.resolve(path_1.default.dirname(mapPath), scriptProperty.value);
     }
     return scripts;
 }
 exports.getMapsScripts = getMapsScripts;
-function getMapsOptimizers(options, mapDirectory) {
-    const maps = getMapsLinks(mapDirectory);
+function getMapsOptimizers(maps, options) {
     const plugins = [];
     const baseDistPath = options?.output?.path ?? "dist";
-    for (const map of maps) {
-        const distFolder = path_1.default.join(baseDistPath, mapDirectory ?? "", path_1.default.dirname(map.replace(new RegExp(`^${mapDirectory}`), "")));
-        const mapName = path_1.default.parse(map).name;
+    for (const [mapPath, map] of maps) {
+        const parsedMapPath = path_1.default.parse(mapPath);
+        const mapName = parsedMapPath.name;
+        const mapDirectory = parsedMapPath.dir;
+        const distFolder = path_1.default.join(baseDistPath, mapDirectory);
         const optionsParsed = {
             logs: 1,
             output: {
@@ -80,13 +80,13 @@ function getMapsOptimizers(options, mapDirectory) {
             .createHash("shake256", { outputLength: 4 })
             .update(Date.now() + mapName)
             .digest("hex");
-        plugins.push(mapOptimizer(map, distFolder, optionsParsed, baseDistPath));
+        plugins.push(mapOptimizer(mapPath, map, distFolder, optionsParsed, baseDistPath));
     }
     return plugins;
 }
 exports.getMapsOptimizers = getMapsOptimizers;
 // Map Optimizer Vite Plugin
-function mapOptimizer(mapPath, distFolder, optimizeOptions, baseDistPath) {
+function mapOptimizer(mapPath, map, distFolder, optimizeOptions, baseDistPath) {
     return {
         name: "map-optimizer",
         load() {
@@ -97,8 +97,6 @@ function mapOptimizer(mapPath, distFolder, optimizeOptions, baseDistPath) {
             const mapName = path_1.default.parse(mapPath).name;
             const mapExtension = path_1.default.parse(mapPath).ext;
             const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
-            const mapFile = await fs_1.default.promises.readFile(mapPath);
-            const map = mapGuards_1.isMap.parse(JSON.parse(mapFile.toString()));
             if (!map?.properties) {
                 return;
             }

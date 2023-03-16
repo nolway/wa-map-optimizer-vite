@@ -1,6 +1,8 @@
 import { PluginOption } from "vite";
+import { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards";
-export declare function getMapsScripts(mapDirectory?: string): {
+export declare function getMaps(mapDirectory?: string): Map<string, ITiledMap>;
+export declare function getMapsScripts(maps: Map<string, ITiledMap>): {
     [entryAlias: string]: string;
 };
-export declare function getMapsOptimizers(options?: OptimizeOptions, mapDirectory?: string): PluginOption[];
+export declare function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: OptimizeOptions): PluginOption[];
