@@ -31,9 +31,22 @@ function isMapFile(filePath: string): ITiledMap | undefined {
         return undefined;
     }
 
-    const object = JSON.parse(fs.readFileSync(filePath).toString());
+    let object = undefined;
+
+    try {
+        object = JSON.parse(fs.readFileSync(filePath).toString());
+    } catch (error) {
+        throw new Error(`Error on ${filePath} map file: ${error}`);
+    }
+
     const mapFile = ITiledMap.safeParse(object);
-    return mapFile.success ? mapFile.data : undefined;
+
+    if (!mapFile.success) {
+        console.error(`${filePath} is not a compatible map file, the file will be skip`);
+        return undefined;
+    }
+
+    return mapFile.data;
 }
 
 export function getMapsScripts(maps: Map<string, ITiledMap>): { [entryAlias: string]: string } {

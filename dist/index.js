@@ -31,9 +31,19 @@ function isMapFile(filePath) {
     if (!filePath.endsWith(".tmj")) {
         return undefined;
     }
-    const object = JSON.parse(fs_1.default.readFileSync(filePath).toString());
+    let object = undefined;
+    try {
+        object = JSON.parse(fs_1.default.readFileSync(filePath).toString());
+    }
+    catch (error) {
+        throw new Error(`Error on ${filePath} map file: ${error}`);
+    }
     const mapFile = tiled_map_type_guard_1.ITiledMap.safeParse(object);
-    return mapFile.success ? mapFile.data : undefined;
+    if (!mapFile.success) {
+        console.error(`${filePath} is not a compatible map file, the file will be skip`);
+        return undefined;
+    }
+    return mapFile.data;
 }
 function getMapsScripts(maps) {
     const scripts = {};
