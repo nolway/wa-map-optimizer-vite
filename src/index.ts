@@ -44,6 +44,7 @@ function isMapFile(filePath: string): ITiledMap | undefined {
 
     if (!mapFile.success) {
         console.error(`${filePath} is not a compatible map file, the file will be skip`);
+        console.error(mapFile.error.issues);
         return undefined;
     }
 
