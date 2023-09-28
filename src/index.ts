@@ -6,6 +6,7 @@ import { optimize } from "wa-map-optimizer";
 import crypto from "crypto";
 import { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards";
+export { OptimizeOptions, LogLevel } from "wa-map-optimizer/dist/guards/libGuards";
 
 export function getMaps(mapDirectory = "."): Map<string, ITiledMap> {
     let mapFiles = new Map<string, ITiledMap>();

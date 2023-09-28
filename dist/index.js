@@ -3,12 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMapsOptimizers = exports.getMapsScripts = exports.getMaps = void 0;
+exports.getMapsOptimizers = exports.getMapsScripts = exports.getMaps = exports.LogLevel = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const wa_map_optimizer_1 = require("wa-map-optimizer");
 const crypto_1 = __importDefault(require("crypto"));
 const tiled_map_type_guard_1 = require("@workadventure/tiled-map-type-guard");
+var libGuards_1 = require("wa-map-optimizer/dist/guards/libGuards");
+Object.defineProperty(exports, "LogLevel", { enumerable: true, get: function () { return libGuards_1.LogLevel; } });
 function getMaps(mapDirectory = ".") {
     let mapFiles = new Map();
     for (const file of fs_1.default.readdirSync(mapDirectory)) {
