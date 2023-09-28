@@ -43,7 +43,7 @@ function isMapFile(filePath) {
     const mapFile = tiled_map_type_guard_1.ITiledMap.safeParse(object);
     if (!mapFile.success) {
         console.error(`${filePath} is not a compatible map file, the file will be skip`);
-        console.error(mapFile.error.issues);
+        console.error(JSON.stringify(mapFile.error.issues));
         return undefined;
     }
     return mapFile.data;
