@@ -5,8 +5,8 @@ import type { Plugin } from "vite";
 import { optimize } from "wa-map-optimizer";
 import crypto from "crypto";
 import { ITiledMap } from "@workadventure/tiled-map-type-guard";
-import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards";
-export { OptimizeOptions, LogLevel } from "wa-map-optimizer/dist/guards/libGuards";
+import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards.js";
+export { OptimizeOptions, LogLevel } from "wa-map-optimizer/dist/guards/libGuards.js";
 
 export function getMaps(mapDirectory = "."): Map<string, ITiledMap> {
     let mapFiles = new Map<string, ITiledMap>();
@@ -109,7 +109,7 @@ export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: Optimi
             .update(Date.now() + mapName)
             .digest("hex");
 
-        plugins.push(mapOptimizer(mapPath, map, distFolder, optionsParsed, baseDistPath));
+        plugins.push(mapOptimizer(mapPath, map, distFolder, structuredClone(optionsParsed), baseDistPath));
     }
 
     return plugins;

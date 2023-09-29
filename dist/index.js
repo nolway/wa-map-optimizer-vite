@@ -3,7 +3,7 @@ import path from "path";
 import { optimize } from "wa-map-optimizer";
 import crypto from "crypto";
 import { ITiledMap } from "@workadventure/tiled-map-type-guard";
-export { LogLevel } from "wa-map-optimizer/dist/guards/libGuards";
+export { LogLevel } from "wa-map-optimizer/dist/guards/libGuards.js";
 export function getMaps(mapDirectory = ".") {
     let mapFiles = new Map();
     for (const file of fs.readdirSync(mapDirectory)) {
@@ -84,7 +84,7 @@ export function getMapsOptimizers(maps, options) {
             .createHash("shake256", { outputLength: 4 })
             .update(Date.now() + mapName)
             .digest("hex");
-        plugins.push(mapOptimizer(mapPath, map, distFolder, optionsParsed, baseDistPath));
+        plugins.push(mapOptimizer(mapPath, map, distFolder, structuredClone(optionsParsed), baseDistPath));
     }
     return plugins;
 }
