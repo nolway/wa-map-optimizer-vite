@@ -1,21 +1,14 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMapsOptimizers = exports.getMapsScripts = exports.getMaps = exports.LogLevel = void 0;
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
-const wa_map_optimizer_1 = require("wa-map-optimizer");
-const crypto_1 = __importDefault(require("crypto"));
-const tiled_map_type_guard_1 = require("@workadventure/tiled-map-type-guard");
-var libGuards_1 = require("wa-map-optimizer/dist/guards/libGuards");
-Object.defineProperty(exports, "LogLevel", { enumerable: true, get: function () { return libGuards_1.LogLevel; } });
-function getMaps(mapDirectory = ".") {
+import fs from "fs";
+import path from "path";
+import { optimize } from "wa-map-optimizer";
+import crypto from "crypto";
+import { ITiledMap } from "@workadventure/tiled-map-type-guard";
+export { LogLevel } from "wa-map-optimizer/dist/guards/libGuards";
+export function getMaps(mapDirectory = ".") {
     let mapFiles = new Map();
-    for (const file of fs_1.default.readdirSync(mapDirectory)) {
+    for (const file of fs.readdirSync(mapDirectory)) {
         const fullPath = mapDirectory + "/" + file;
-        if (mapDirectory && fs_1.default.lstatSync(fullPath).isDirectory() && file !== "dist" && file !== "node_modules") {
+        if (mapDirectory && fs.lstatSync(fullPath).isDirectory() && file !== "dist" && file !== "node_modules") {
             mapFiles = new Map([...mapFiles, ...getMaps(fullPath)]);
         }
         else {
@@ -28,19 +21,18 @@ function getMaps(mapDirectory = ".") {
     }
     return mapFiles;
 }
-exports.getMaps = getMaps;
 function isMapFile(filePath) {
     if (!filePath.endsWith(".tmj")) {
         return undefined;
     }
     let object = undefined;
     try {
-        object = JSON.parse(fs_1.default.readFileSync(filePath).toString());
+        object = JSON.parse(fs.readFileSync(filePath).toString());
     }
     catch (error) {
         throw new Error(`Error on ${filePath} map file: ${error}`);
     }
-    const mapFile = tiled_map_type_guard_1.ITiledMap.safeParse(object);
+    const mapFile = ITiledMap.safeParse(object);
     if (!mapFile.success) {
         console.error(`${filePath} is not a compatible map file, the file will be skip`);
         console.error(JSON.stringify(mapFile.error.issues));
@@ -48,7 +40,7 @@ function isMapFile(filePath) {
     }
     return mapFile.data;
 }
-function getMapsScripts(maps) {
+export function getMapsScripts(maps) {
     const scripts = {};
     for (const [mapPath, map] of maps) {
         if (!map.properties) {
@@ -58,20 +50,19 @@ function getMapsScripts(maps) {
         if (!scriptProperty || typeof scriptProperty.value !== "string") {
             continue;
         }
-        const scriptName = path_1.default.parse(scriptProperty.value).name;
-        scripts[scriptName] = path_1.default.resolve(path_1.default.dirname(mapPath), scriptProperty.value);
+        const scriptName = path.parse(scriptProperty.value).name;
+        scripts[scriptName] = path.resolve(path.dirname(mapPath), scriptProperty.value);
     }
     return scripts;
 }
-exports.getMapsScripts = getMapsScripts;
-function getMapsOptimizers(maps, options) {
+export function getMapsOptimizers(maps, options) {
     const plugins = [];
     const baseDistPath = options?.output?.path ?? "dist";
     for (const [mapPath, map] of maps) {
-        const parsedMapPath = path_1.default.parse(mapPath);
+        const parsedMapPath = path.parse(mapPath);
         const mapName = parsedMapPath.name;
         const mapDirectory = parsedMapPath.dir;
-        const distFolder = path_1.default.join(baseDistPath, mapDirectory);
+        const distFolder = path.join(baseDistPath, mapDirectory);
         const optionsParsed = {
             logs: 1,
             output: {
@@ -89,7 +80,7 @@ function getMapsOptimizers(maps, options) {
             optionsParsed.output.tileset = {};
         }
         optionsParsed.output.tileset.prefix = `${mapName}-chunk`;
-        optionsParsed.output.tileset.suffix = crypto_1.default
+        optionsParsed.output.tileset.suffix = crypto
             .createHash("shake256", { outputLength: 4 })
             .update(Date.now() + mapName)
             .digest("hex");
@@ -97,7 +88,6 @@ function getMapsOptimizers(maps, options) {
     }
     return plugins;
 }
-exports.getMapsOptimizers = getMapsOptimizers;
 // Map Optimizer Vite Plugin
 function mapOptimizer(mapPath, map, distFolder, optimizeOptions, baseDistPath) {
     return {
@@ -106,30 +96,30 @@ function mapOptimizer(mapPath, map, distFolder, optimizeOptions, baseDistPath) {
             this.addWatchFile(mapPath);
         },
         async writeBundle() {
-            await (0, wa_map_optimizer_1.optimize)(mapPath, optimizeOptions);
-            const mapName = path_1.default.parse(mapPath).name;
-            const mapExtension = path_1.default.parse(mapPath).ext;
+            await optimize(mapPath, optimizeOptions);
+            const mapName = path.parse(mapPath).name;
+            const mapExtension = path.parse(mapPath).ext;
             const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
             if (!map?.properties) {
                 return;
             }
-            if (!fs_1.default.existsSync(distFolder)) {
+            if (!fs.existsSync(distFolder)) {
                 throw new Error(`Cannot find ${distFolder} build folder`);
             }
-            if (!fs_1.default.existsSync(optimizedMapFilePath)) {
+            if (!fs.existsSync(optimizedMapFilePath)) {
                 throw new Error(`Unknown optimized map file on: ${optimizedMapFilePath}`);
             }
-            const optimizedMapFile = await fs_1.default.promises.readFile(optimizedMapFilePath);
+            const optimizedMapFile = await fs.promises.readFile(optimizedMapFilePath);
             const optimizedMap = JSON.parse(optimizedMapFile.toString());
             if (!optimizedMap?.properties) {
                 throw new Error("Undefined properties on map optimized! Something was wrong!");
             }
             const imageProperty = map.properties.find((property) => property.name === "mapImage");
             if (imageProperty && typeof imageProperty.value === "string") {
-                const imagePath = path_1.default.resolve(path_1.default.dirname(mapPath), imageProperty.value);
-                if (fs_1.default.existsSync(imagePath)) {
-                    const newMapImageName = `${mapName}${path_1.default.parse(imagePath).ext}`;
-                    await fs_1.default.promises.copyFile(imagePath, `${distFolder}/${newMapImageName}`);
+                const imagePath = path.resolve(path.dirname(mapPath), imageProperty.value);
+                if (fs.existsSync(imagePath)) {
+                    const newMapImageName = `${mapName}${path.parse(imagePath).ext}`;
+                    await fs.promises.copyFile(imagePath, `${distFolder}/${newMapImageName}`);
                     for (const property of optimizedMap.properties) {
                         if (property.name === "mapImage") {
                             property.value = newMapImageName;
@@ -143,11 +133,11 @@ function mapOptimizer(mapPath, map, distFolder, optimizeOptions, baseDistPath) {
                 return;
             }
             const assetsFolder = `${baseDistPath}/assets`;
-            if (!fs_1.default.existsSync(assetsFolder)) {
+            if (!fs.existsSync(assetsFolder)) {
                 throw new Error(`Cannot find ${assetsFolder} assets build folder`);
             }
-            const scriptName = path_1.default.parse(scriptProperty.value).name;
-            const fileName = fs_1.default
+            const scriptName = path.parse(scriptProperty.value).name;
+            const fileName = fs
                 .readdirSync(assetsFolder)
                 .find((asset) => asset.match(new RegExp(`^${scriptName}-.*.js$`)));
             if (!fileName) {
@@ -155,12 +145,12 @@ function mapOptimizer(mapPath, map, distFolder, optimizeOptions, baseDistPath) {
             }
             for (const property of optimizedMap.properties) {
                 if (property.name === "script") {
-                    property.value = path_1.default.relative(distFolder, `${assetsFolder}/${fileName}`);
+                    property.value = path.relative(distFolder, `${assetsFolder}/${fileName}`);
                     break;
                 }
             }
-            fs_1.default.promises.mkdir(path_1.default.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
-                fs_1.default.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
+            fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
+                fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
             });
         },
     };
