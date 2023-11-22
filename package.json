@@ -34,9 +34,7 @@
     },
     "lint-staged": {
         "*.{js,ts}": [
-            "eslint --fix",
-            "bash -c tsc",
-            "git add dist"
+            "eslint --fix"
         ],
         "*.{js,ts,json}": [
             "prettier --write"
