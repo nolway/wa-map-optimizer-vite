@@ -1,6 +1,6 @@
 {
     "name": "wa-map-optimizer-vite",
-    "version": "1.1.26",
+    "version": "1.1.27",
     "description": "Vite plugin for WA Map Optimizer",
     "main": "dist/index.js",
     "author": "Nolway (Alexis Faizeau)",
@@ -30,7 +30,7 @@
     },
     "dependencies": {
         "@workadventure/tiled-map-type-guard": "^2.1.1",
-        "wa-map-optimizer": "^1.4.3"
+        "wa-map-optimizer": "^1.4.5"
     },
     "lint-staged": {
         "*.{js,ts}": [
