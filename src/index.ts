@@ -200,7 +200,7 @@ function mapOptimizer(
                 }
             }
 
-            fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
+            await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
                 fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
             });
         },
