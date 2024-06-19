@@ -30,7 +30,7 @@
     },
     "dependencies": {
         "@workadventure/tiled-map-type-guard": "^2.1.2",
-        "wa-map-optimizer": "^1.4.7"
+        "wa-map-optimizer": "^1.4.8"
     },
     "lint-staged": {
         "*.{js,ts}": [
