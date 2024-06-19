@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.29](https://github.com/Nolway/wa-map-optimizer-vite/compare/v1.1.28...v1.1.29) (2024-06-19)
+
+
+### Bug Fixes
+
+* Upgrading some dependencies ([ec2271c](https://github.com/Nolway/wa-map-optimizer-vite/commit/ec2271cccfb0fd9545b387fe25551210ba77f74c))
+* Upgrading to wa-map-optimizer 1.4.8 ([bcdd607](https://github.com/Nolway/wa-map-optimizer-vite/commit/bcdd6074bd2313aaca8eb684ad27bf10577813b7))
+
 ## [1.1.28](https://github.com/Nolway/wa-map-optimizer-vite/compare/v1.1.30...v1.1.28) (2023-12-14)
 
 
