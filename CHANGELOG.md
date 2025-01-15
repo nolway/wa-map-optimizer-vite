@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.30](https://github.com/Nolway/wa-map-optimizer-vite/compare/v1.1.29...v1.1.30) (2025-01-15)
+
+
+### Bug Fixes
+
+* Fixing crash when mapImage property is empty ([11441ec](https://github.com/Nolway/wa-map-optimizer-vite/commit/11441ec4bf5642009b248b9b4d79b669ef5d5463))
+
 ## [1.1.29](https://github.com/Nolway/wa-map-optimizer-vite/compare/v1.1.28...v1.1.29) (2024-06-19)
 
 
