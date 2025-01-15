@@ -156,7 +156,7 @@ function mapOptimizer(
 
             const imageProperty = map.properties.find((property) => property.name === "mapImage");
 
-            if (imageProperty && typeof imageProperty.value === "string" && imageProperty.value) {
+            if (imageProperty && typeof imageProperty.value === "string" && imageProperty.value !== "") {
                 const imagePath = path.resolve(path.dirname(mapPath), imageProperty.value);
 
                 if (fs.existsSync(imagePath)) {
