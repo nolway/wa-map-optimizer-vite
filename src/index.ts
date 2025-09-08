@@ -187,7 +187,7 @@ function mapOptimizer(
             const scriptName = path.parse(scriptProperty.value).name;
             const fileName = fs
                 .readdirSync(assetsFolder)
-                .find((asset) => asset.match(new RegExp(`^${scriptName}-.*.js$`)));
+                .find((asset) => asset.match(new RegExp(`^${scriptName}-[a-fA-F0-9]{8}\\.js$`)));
 
             if (!fileName) {
                 throw new Error(`Undefined ${scriptName} script file`);
