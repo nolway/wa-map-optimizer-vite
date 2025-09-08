@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.31](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.1.30...v1.1.31) (2025-09-08)
+
+
+### Bug Fixes
+
+* Adding a README ([8b9a781](https://github.com/nolway/wa-map-optimizer-vite/commit/8b9a78139aa30691a90d291f21c3e7e1b88656cd))
+
 ## [1.1.30](https://github.com/Nolway/wa-map-optimizer-vite/compare/v1.1.29...v1.1.30) (2025-01-15)
 
 
