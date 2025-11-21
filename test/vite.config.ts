@@ -6,6 +6,7 @@ const maps = getMaps("maps");
 const optimizeOptions: WaMapOptimizerOptions = {
     logs: LogLevel.VERBOSE, // Verbose logging for debugging
     playUrl: "https://play.workadventu.re",
+    maxParallelOptimizations: 2, // Test with limited parallelization
 };
 
 export default defineConfig({

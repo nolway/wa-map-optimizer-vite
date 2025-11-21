@@ -97,6 +97,8 @@ if (!fs.existsSync(mapsDir)) {
     const tmjFiles = fs.readdirSync(mapsDir).filter((f) => f.endsWith(".tmj"));
     if (tmjFiles.length === 0) {
         error("No optimized TMJ files found in dist/maps/");
+    } else if (tmjFiles.length < 3) {
+        warn(`Expected at least 3 TMJ files, found ${tmjFiles.length}: ${tmjFiles.join(", ")}`);
     } else {
         success(`Found ${tmjFiles.length} optimized TMJ file(s): ${tmjFiles.join(", ")}`);
     }

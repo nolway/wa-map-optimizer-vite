@@ -49,6 +49,7 @@ const optimizeOptions: WaMapOptimizerOptions = {
   logs: 1, // 0=silent ... 3=verbose (see wa-map-optimizer LogLevel)
   // output: { path: 'dist' } // defaults to 'dist'
   // playUrl: 'https://play.workadventu.re' // defaults to process.env.PLAY_URL or 'https://play.workadventu.re'
+  // maxParallelOptimizations: 4 // defaults to number of CPU cores
 };
 
 export default defineConfig({
@@ -104,11 +105,26 @@ vite build
 
 3. If neither is set, it defaults to `https://play.workadventu.re`
 
+### maxParallelOptimizations
+
+You can control the maximum number of maps being optimized in parallel to prevent resource exhaustion on limited environments:
+
+```ts
+const optimizeOptions: WaMapOptimizerOptions = {
+  maxParallelOptimizations: 2 // Limit to 2 concurrent optimizations
+};
+```
+
+- If not set, it defaults to the number of CPU cores available on your system
+- Setting this to `1` will optimize maps sequentially
+- This is particularly useful when deploying to CI/CD runners with limited resources
+
 ## How it works
 
 - getMaps walks the provided directory (skipping dist and node_modules), validates .tmj files, and returns a Map of path -> ITiledMap
 - getMapsScripts returns a Rollup/Vite input object mapping each map script name to its source path
-- getMapsOptimizers returns an array of Vite plugins; during writeBundle each plugin:
+- getMapsOptimizers returns a Vite plugin that processes all maps with controlled concurrency:
+  - uses p-limit to control the number of concurrent map optimizations (defaults to CPU count)
   - runs wa-map-optimizer to generate the optimized .tmj and tileset chunks
   - optionally copies the mapImage file next to the optimized map and updates the property
   - reads the built assets folder (dist/assets) to locate the hashed JS for the declared script
