@@ -5,8 +5,9 @@ import type { Plugin } from "vite";
 import { optimize } from "wa-map-optimizer";
 import crypto from "crypto";
 import { ITiledMap } from "@workadventure/tiled-map-type-guard";
-import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards.js";
-export { OptimizeOptions, LogLevel } from "wa-map-optimizer/dist/guards/libGuards.js";
+import type { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards.js";
+export type { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards.js";
+export { LogLevel } from "wa-map-optimizer/dist/guards/libGuards.js";
 
 export type WaMapOptimizerOptions = {
     playUrl?: string;
