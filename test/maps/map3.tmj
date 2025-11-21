@@ -45,7 +45,7 @@
     {
       "name": "script",
       "type": "string",
-      "value": "./scripts/map3.ts"
+      "value": "./scripts/map2.ts"
     }
   ]
 }
