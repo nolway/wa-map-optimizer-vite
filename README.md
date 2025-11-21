@@ -49,6 +49,7 @@ const optimizeOptions: WaMapOptimizerOptions = {
   logs: 1, // 0=silent ... 3=verbose (see wa-map-optimizer LogLevel)
   // output: { path: 'dist' } // defaults to 'dist'
   // playUrl: 'https://play.workadventu.re' // defaults to process.env.PLAY_URL or 'https://play.workadventu.re'
+  // maxParallelBuilds: 2 // defaults to os.cpus().length - limit concurrent map optimizations
 };
 
 export default defineConfig({
@@ -104,12 +105,27 @@ vite build
 
 3. If neither is set, it defaults to `https://play.workadventu.re`
 
+### maxParallelBuilds
+
+You can control the maximum number of maps that are optimized in parallel. This is useful when building projects with many maps to avoid overloading the build runner.
+
+1. Pass it in the `WaMapOptimizerOptions`:
+```ts
+const optimizeOptions: WaMapOptimizerOptions = {
+  maxParallelBuilds: 2  // Limit to 2 parallel map optimizations
+};
+```
+
+2. If not set, it defaults to the number of CPU cores (`os.cpus().length`)
+
+For projects with many large maps, consider setting this to a lower value (e.g., 1 or 2) to prevent excessive memory usage and potential build failures on CI/CD runners with limited resources.
+
 ## How it works
 
 - getMaps walks the provided directory (skipping dist and node_modules), validates .tmj files, and returns a Map of path -> ITiledMap
 - getMapsScripts returns a Rollup/Vite input object mapping each map script name to its source path
 - getMapsOptimizers returns an array of Vite plugins; during writeBundle each plugin:
-  - runs wa-map-optimizer to generate the optimized .tmj and tileset chunks
+  - runs wa-map-optimizer to generate the optimized .tmj and tileset chunks (controlled by maxParallelBuilds concurrency limit)
   - optionally copies the mapImage file next to the optimized map and updates the property
   - reads the built assets folder (dist/assets) to locate the hashed JS for the declared script
   - generates an HTML wrapper file that includes the WorkAdventure iframe API and the compiled script
@@ -119,4 +135,5 @@ Notes:
 - The base output folder defaults to dist. You can override via OptimizeOptions.output.path (or WaMapOptimizerOptions.output.path)
 - Tileset names are automatically prefixed with <mapName>-chunk and suffixed with a short shake256 digest
 - The HTML wrapper uses the `playUrl` option (or PLAY_URL env variable, or defaults to https://play.workadventu.re) for the iframe_api.js script
+- Map optimization is controlled by the `maxParallelBuilds` option (defaults to number of CPU cores) to prevent resource exhaustion
 
