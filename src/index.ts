@@ -11,6 +11,9 @@ import os from "os";
 export type { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards.js";
 export { LogLevel } from "wa-map-optimizer/dist/guards/libGuards.js";
 
+// Cache CPU count at module level since it doesn't change during runtime
+const DEFAULT_MAX_PARALLEL_BUILDS = os.cpus().length;
+
 export type WaMapOptimizerOptions = {
     playUrl?: string;
     maxParallelBuilds?: number;
@@ -119,7 +122,7 @@ export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: WaMapO
     const plugins: PluginOption[] = [];
     const baseDistPath = options?.output?.path ?? "dist";
     const playUrl = options?.playUrl ?? process.env.PLAY_URL ?? "https://play.workadventu.re";
-    const maxParallelBuilds = options?.maxParallelBuilds ?? os.cpus().length;
+    const maxParallelBuilds = options?.maxParallelBuilds ?? DEFAULT_MAX_PARALLEL_BUILDS;
 
     // Create a shared concurrency limiter for all map optimization tasks
     const limit = pLimit(maxParallelBuilds);
