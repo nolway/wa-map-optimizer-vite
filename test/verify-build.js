@@ -94,33 +94,75 @@ if (!fs.existsSync(mapsDir)) {
 } else {
     success("dist/maps/ directory exists");
 
-    const tmjFiles = fs.readdirSync(mapsDir).filter((f) => f.endsWith(".tmj"));
-    if (tmjFiles.length === 0) {
+    // Recursively find all TMJ files
+    function findTmjFiles(dir) {
+        const files = [];
+        const items = fs.readdirSync(dir);
+        for (const item of items) {
+            const fullPath = path.join(dir, item);
+            if (fs.statSync(fullPath).isDirectory()) {
+                files.push(...findTmjFiles(fullPath));
+            } else if (item.endsWith(".tmj")) {
+                files.push(fullPath);
+            }
+        }
+        return files;
+    }
+
+    const tmjFilePaths = findTmjFiles(mapsDir);
+    if (tmjFilePaths.length === 0) {
         error("No optimized TMJ files found in dist/maps/");
     } else {
-        success(`Found ${tmjFiles.length} optimized TMJ file(s): ${tmjFiles.join(", ")}`);
+        success(`Found ${tmjFilePaths.length} optimized TMJ file(s)`);
     }
 
     // Test 7: Verify TMJ script property points to HTML
-    tmjFiles.forEach((tmjFile) => {
-        const tmjPath = path.join(mapsDir, tmjFile);
+    const scriptReferences = new Map(); // Track script references by map name
+    tmjFilePaths.forEach((tmjPath) => {
         const tmjContent = JSON.parse(fs.readFileSync(tmjPath, "utf-8"));
+        const relativePath = path.relative(mapsDir, tmjPath);
 
         const scriptProp = tmjContent.properties?.find((p) => p.name === "script");
         if (!scriptProp) {
-            warn(`${tmjFile} has no script property`);
+            warn(`${relativePath} has no script property`);
         } else if (!scriptProp.value.endsWith(".html")) {
-            error(`${tmjFile} script property does not point to HTML file: ${scriptProp.value}`);
+            error(`${relativePath} script property does not point to HTML file: ${scriptProp.value}`);
         } else {
-            success(`${tmjFile} script property correctly points to HTML: ${scriptProp.value}`);
+            success(`${relativePath} script property correctly points to HTML: ${scriptProp.value}`);
 
             // Verify the referenced HTML file exists
-            const htmlRefPath = path.join(mapsDir, scriptProp.value);
+            const htmlRefPath = path.join(path.dirname(tmjPath), scriptProp.value);
             if (!fs.existsSync(htmlRefPath)) {
                 error(`Referenced HTML file does not exist: ${htmlRefPath}`);
             }
+
+            // Track script references to detect duplicates
+            const mapName = path.basename(tmjPath, ".tmj");
+            scriptReferences.set(mapName, scriptProp.value);
         }
     });
+
+    // Test 7b: Verify maps with same script name in different directories get unique HTML files
+    // but maps pointing to the SAME script file should share the same HTML
+
+    // Check if map1 and map3 share the same script (they both reference map1/scripts/main.ts)
+    const map1Script = scriptReferences.get("map1");
+    const map3Script = scriptReferences.get("map3");
+    if (map1Script && map3Script) {
+        if (map1Script === map3Script) {
+            success(`map1 and map3 correctly share the same script: ${map1Script}`);
+        } else {
+            error(`map1 and map3 should share the same script but got:\n  map1: ${map1Script}\n  map3: ${map3Script}`);
+        }
+    }
+
+    // Verify that map2 has a different script
+    const map2Script = scriptReferences.get("map2");
+    if (map2Script && map1Script && map2Script === map1Script) {
+        error(`map2 should have a different script than map1, but both reference: ${map1Script}`);
+    } else if (map2Script && map1Script) {
+        success(`map2 correctly has a different script than map1`);
+    }
 }
 
 // Test 8: Check hash matching between JS and HTML files

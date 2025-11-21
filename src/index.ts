@@ -56,7 +56,18 @@ function isMapFile(filePath: string): ITiledMap | undefined {
 }
 
 export function getMapsScripts(maps: Map<string, ITiledMap>): { [entryAlias: string]: string } {
+    const { scripts } = getMapsScriptsWithAliases(maps);
+    return scripts;
+}
+
+// Internal function that returns both scripts and the path-to-alias mapping
+function getMapsScriptsWithAliases(maps: Map<string, ITiledMap>): {
+    scripts: { [entryAlias: string]: string };
+    scriptPathToAlias: Map<string, string>;
+} {
     const scripts: { [entryAlias: string]: string } = {};
+    const scriptPathToAlias = new Map<string, string>();
+    const aliasCount = new Map<string, number>();
 
     for (const [mapPath, map] of maps) {
         if (!map.properties) {
@@ -69,18 +80,44 @@ export function getMapsScripts(maps: Map<string, ITiledMap>): { [entryAlias: str
             continue;
         }
 
-        const scriptName = path.parse(scriptProperty.value).name;
+        const scriptAbsolutePath = path.resolve(path.dirname(mapPath), scriptProperty.value);
 
-        scripts[scriptName] = path.resolve(path.dirname(mapPath), scriptProperty.value);
+        // Check if this script path has already been registered
+        if (scriptPathToAlias.has(scriptAbsolutePath)) {
+            // Script is shared, skip adding it again
+            continue;
+        }
+
+        // Create a unique alias for this script
+        const scriptName = path.parse(scriptAbsolutePath).name;
+        const scriptDir = path.basename(path.dirname(scriptAbsolutePath));
+        const baseAlias = `${scriptDir}-${scriptName}`;
+
+        // Handle alias collisions by appending parent directory names
+        let uniqueScriptName = baseAlias;
+        let currentPath = path.dirname(scriptAbsolutePath);
+
+        while (aliasCount.has(uniqueScriptName)) {
+            const parentDir = path.basename(path.dirname(currentPath));
+            uniqueScriptName = `${parentDir}-${uniqueScriptName}`;
+            currentPath = path.dirname(currentPath);
+        }
+
+        scripts[uniqueScriptName] = scriptAbsolutePath;
+        scriptPathToAlias.set(scriptAbsolutePath, uniqueScriptName);
+        aliasCount.set(uniqueScriptName, 1);
     }
 
-    return scripts;
+    return { scripts, scriptPathToAlias };
 }
 
 export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: WaMapOptimizerOptions): PluginOption[] {
     const plugins: PluginOption[] = [];
     const baseDistPath = options?.output?.path ?? "dist";
     const playUrl = options?.playUrl ?? process.env.PLAY_URL ?? "https://play.workadventu.re";
+
+    // Get the script path to alias mapping
+    const { scriptPathToAlias } = getMapsScriptsWithAliases(maps);
 
     for (const [mapPath, map] of maps) {
         const parsedMapPath = path.parse(mapPath);
@@ -114,7 +151,17 @@ export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: WaMapO
             .update(Date.now() + mapName)
             .digest("hex");
 
-        plugins.push(mapOptimizer(mapPath, map, distFolder, structuredClone(optionsParsed), baseDistPath, playUrl));
+        plugins.push(
+            mapOptimizer(
+                mapPath,
+                map,
+                distFolder,
+                structuredClone(optionsParsed),
+                baseDistPath,
+                playUrl,
+                scriptPathToAlias
+            )
+        );
     }
 
     return plugins;
@@ -127,7 +174,8 @@ function mapOptimizer(
     distFolder: string,
     optimizeOptions: OptimizeOptions,
     baseDistPath: string,
-    playUrl: string
+    playUrl: string,
+    scriptPathToAlias: Map<string, string>
 ): Plugin {
     return {
         name: "map-optimizer",
@@ -190,15 +238,21 @@ function mapOptimizer(
                 throw new Error(`Cannot find ${assetsFolder} assets build folder`);
             }
 
-            const scriptName = path.parse(scriptProperty.value).name;
-            const fileName = fs
-                .readdirSync(assetsFolder)
-                .find((asset) => asset.match(new RegExp(`^${scriptName}-[a-fA-F0-9]{8}\\.js$`)));
+            const scriptAbsolutePath = path.resolve(path.dirname(mapPath), scriptProperty.value);
+            const uniqueScriptName = scriptPathToAlias.get(scriptAbsolutePath);
 
-            if (!fileName) {
-                throw new Error(`Undefined ${scriptName} script file`);
+            if (!uniqueScriptName) {
+                throw new Error(`Cannot find alias for script: ${scriptAbsolutePath}`);
             }
 
+            const escapedScriptName = uniqueScriptName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const fileName = fs
+                .readdirSync(assetsFolder)
+                .find((asset) => asset.match(new RegExp(`^${escapedScriptName}-[a-fA-F0-9]{8}\\.js$`)));
+
+            if (!fileName) {
+                throw new Error(`Undefined ${uniqueScriptName} script file`);
+            }
             // Extract the hash from the compiled JS filename
             const hashMatch = fileName.match(/-([a-fA-F0-9]{8})\.js$/);
             if (!hashMatch) {
@@ -207,7 +261,7 @@ function mapOptimizer(
             const hash = hashMatch[1];
 
             // Generate HTML wrapper file
-            const htmlFileName = `${scriptName}-${hash}.html`;
+            const htmlFileName = `${uniqueScriptName}-${hash}.html`;
             const htmlFilePath = `${assetsFolder}/${htmlFileName}`;
             const jsRelativePath = `./${fileName}`;
 
@@ -217,7 +271,6 @@ function mapOptimizer(
             } catch (e) {
                 throw new Error(`Invalid playUrl: ${playUrl}`);
             }
-
             const htmlContent = `<!DOCTYPE html>
 <html>
   <head>
