@@ -1,5 +1,7 @@
 # WA Map Optimizer Vite Plugin
 
+[![Tests](https://github.com/nolway/wa-map-optimizer-vite/actions/workflows/test.yml/badge.svg)](https://github.com/nolway/wa-map-optimizer-vite/actions/workflows/test.yml)
+
 Vite plugin to optimize WorkAdventure Tiled (.tmj) maps using wa-map-optimizer, and to wire Tiled "script" and "mapImage" properties to your built assets automatically.
 
 - Recursively discovers .tmj maps
