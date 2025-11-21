@@ -14,7 +14,8 @@
         "prepare": "husky install",
         "build": "tsc --build",
         "lint": "eslint --ext .js,.ts .",
-        "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
+        "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
+        "test": "npm run build && cd test && npm install && npm run build && npm test"
     },
     "devDependencies": {
         "@types/node": "^18.11.18",

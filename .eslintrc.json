@@ -11,6 +11,7 @@
         "project": "./tsconfig.json"
     },
     "plugins": ["@typescript-eslint"],
+    "ignorePatterns": ["test/**/*"],
     "rules": {
         "linebreak-style": ["error", "unix"],
         "quotes": ["error", "double"],

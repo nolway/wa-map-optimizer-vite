@@ -211,6 +211,13 @@ function mapOptimizer(
             const htmlFilePath = `${assetsFolder}/${htmlFileName}`;
             const jsRelativePath = `./${fileName}`;
 
+            // Basic URL validation
+            try {
+                new URL(playUrl);
+            } catch (e) {
+                throw new Error(`Invalid playUrl: ${playUrl}`);
+            }
+
             const htmlContent = `<!DOCTYPE html>
 <html>
   <head>
