@@ -10,7 +10,7 @@ export { OptimizeOptions, LogLevel } from "wa-map-optimizer/dist/guards/libGuard
 
 export type WaMapOptimizerOptions = {
     playUrl?: string;
-} & OptimizeOptions
+} & OptimizeOptions;
 
 export function getMaps(mapDirectory = "."): Map<string, ITiledMap> {
     let mapFiles = new Map<string, ITiledMap>();
