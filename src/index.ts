@@ -201,9 +201,8 @@ async function processMap(
     const scriptProperty = map.properties.find((property) => property.name === "script");
 
     if (!scriptProperty || typeof scriptProperty.value !== "string") {
-        await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
-            fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
-        });
+        await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true });
+        await fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
         return;
     }
 
@@ -261,7 +260,6 @@ async function processMap(
         }
     }
 
-    await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
-        fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
-    });
+    await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true });
+    await fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
 }
