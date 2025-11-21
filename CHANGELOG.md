@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- New `WaMapOptimizerOptions` interface extending `OptimizeOptions` with `playUrl` option
+- HTML wrapper generation for compiled scripts that includes the WorkAdventure iframe API
+- Support for `PLAY_URL` environment variable to configure the WorkAdventure Play URL
+
+### Changed
+
+- **BREAKING**: The `script` property in TMJ maps now points to an HTML wrapper file instead of directly to the compiled JS file
+- The HTML wrapper loads both the WorkAdventure iframe API (from the configured Play URL) and the compiled script
+- Generated HTML files follow the naming pattern `scriptname-hash.html` (matching the JS file hash)
+- Updated `getMapsOptimizers` signature to accept `WaMapOptimizerOptions` instead of `OptimizeOptions`
+
+### Notes
+
+- The `playUrl` can be configured via:
+  1. `playUrl` option in `WaMapOptimizerOptions`
+  2. `PLAY_URL` environment variable
+  3. Defaults to `https://play.workadventu.re` if neither is set
+
 ## [1.1.31](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.1.30...v1.1.31) (2025-09-08)
 
 

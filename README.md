@@ -37,15 +37,16 @@ Example (excerpt of your .tmj):
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite';
-import { getMaps, getMapsScripts, getMapsOptimizers, type OptimizeOptions } from 'wa-map-optimizer-vite';
+import { getMaps, getMapsScripts, getMapsOptimizers, type WaMapOptimizerOptions } from 'wa-map-optimizer-vite';
 
 // Discover maps (pass the folder containing your .tmj files)
 const maps = getMaps('maps');
 
 // Optional: customize optimizer options (passed to wa-map-optimizer)
-const optimizeOptions: OptimizeOptions = {
+const optimizeOptions: WaMapOptimizerOptions = {
   logs: 1, // 0=silent ... 3=verbose (see wa-map-optimizer LogLevel)
   // output: { path: 'dist' } // defaults to 'dist'
+  // playUrl: 'https://play.workadventu.re' // defaults to process.env.PLAY_URL or 'https://play.workadventu.re'
 };
 
 export default defineConfig({
@@ -75,7 +76,31 @@ vite build
 After the build:
 - Each map is optimized into dist/<original_map_dir>/<mapName>.tmj
 - If a map has a "mapImage" property, the image is copied next to the optimized map and the property is updated
-- If a map has a "script" property, it is replaced by the path to the corresponding hashed asset under dist/assets
+- If a map has a "script" property:
+  - The script is compiled into a hashed JS file (e.g., myscript-12345678.js)
+  - An HTML wrapper file is generated with the same hash (e.g., myscript-12345678.html) that loads both the WorkAdventure iframe API and the compiled script
+  - The "script" property is replaced by the path to the HTML file
+
+## Configuration options
+
+### playUrl
+
+You can configure the WorkAdventure Play URL used in the generated HTML wrapper files in three ways (in order of priority):
+
+1. Pass it in the `WaMapOptimizerOptions`:
+```ts
+const optimizeOptions: WaMapOptimizerOptions = {
+  playUrl: 'https://play.workadventu.re'
+};
+```
+
+2. Set the `PLAY_URL` environment variable:
+```bash
+export PLAY_URL=https://play.workadventu.re
+vite build
+```
+
+3. If neither is set, it defaults to `https://play.workadventu.re`
 
 ## How it works
 
@@ -84,9 +109,12 @@ After the build:
 - getMapsOptimizers returns an array of Vite plugins; during writeBundle each plugin:
   - runs wa-map-optimizer to generate the optimized .tmj and tileset chunks
   - optionally copies the mapImage file next to the optimized map and updates the property
-  - reads the built assets folder (dist/assets) to locate the hashed JS for the declared script and rewrites the map "script" property accordingly
+  - reads the built assets folder (dist/assets) to locate the hashed JS for the declared script
+  - generates an HTML wrapper file that includes the WorkAdventure iframe API and the compiled script
+  - rewrites the map "script" property to point to the HTML wrapper file
 
 Notes:
-- The base output folder defaults to dist. You can override via OptimizeOptions.output.path
+- The base output folder defaults to dist. You can override via OptimizeOptions.output.path (or WaMapOptimizerOptions.output.path)
 - Tileset names are automatically prefixed with <mapName>-chunk and suffixed with a short shake256 digest
+- The HTML wrapper uses the `playUrl` option (or PLAY_URL env variable, or defaults to https://play.workadventu.re) for the iframe_api.js script
 

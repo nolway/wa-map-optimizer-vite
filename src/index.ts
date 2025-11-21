@@ -8,6 +8,10 @@ import { ITiledMap } from "@workadventure/tiled-map-type-guard";
 import { OptimizeOptions } from "wa-map-optimizer/dist/guards/libGuards.js";
 export { OptimizeOptions, LogLevel } from "wa-map-optimizer/dist/guards/libGuards.js";
 
+export type WaMapOptimizerOptions = {
+    playUrl?: string;
+} & OptimizeOptions
+
 export function getMaps(mapDirectory = "."): Map<string, ITiledMap> {
     let mapFiles = new Map<string, ITiledMap>();
 
@@ -73,9 +77,10 @@ export function getMapsScripts(maps: Map<string, ITiledMap>): { [entryAlias: str
     return scripts;
 }
 
-export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: OptimizeOptions): PluginOption[] {
+export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: WaMapOptimizerOptions): PluginOption[] {
     const plugins: PluginOption[] = [];
     const baseDistPath = options?.output?.path ?? "dist";
+    const playUrl = options?.playUrl ?? process.env.PLAY_URL ?? "https://play.workadventu.re";
 
     for (const [mapPath, map] of maps) {
         const parsedMapPath = path.parse(mapPath);
@@ -109,7 +114,7 @@ export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: Optimi
             .update(Date.now() + mapName)
             .digest("hex");
 
-        plugins.push(mapOptimizer(mapPath, map, distFolder, structuredClone(optionsParsed), baseDistPath));
+        plugins.push(mapOptimizer(mapPath, map, distFolder, structuredClone(optionsParsed), baseDistPath, playUrl));
     }
 
     return plugins;
@@ -121,7 +126,8 @@ function mapOptimizer(
     map: ITiledMap,
     distFolder: string,
     optimizeOptions: OptimizeOptions,
-    baseDistPath: string
+    baseDistPath: string,
+    playUrl: string
 ): Plugin {
     return {
         name: "map-optimizer",
@@ -193,9 +199,34 @@ function mapOptimizer(
                 throw new Error(`Undefined ${scriptName} script file`);
             }
 
+            // Extract the hash from the compiled JS filename
+            const hashMatch = fileName.match(/-([a-fA-F0-9]{8})\.js$/);
+            if (!hashMatch) {
+                throw new Error(`Cannot extract hash from ${fileName}`);
+            }
+            const hash = hashMatch[1];
+
+            // Generate HTML wrapper file
+            const htmlFileName = `${scriptName}-${hash}.html`;
+            const htmlFilePath = `${assetsFolder}/${htmlFileName}`;
+            const jsRelativePath = `./${fileName}`;
+
+            const htmlContent = `<!DOCTYPE html>
+<html>
+  <head>
+    <script src="${playUrl}/iframe_api.js"></script>
+    <script src="${jsRelativePath}"></script>
+  </head>
+  <body>
+
+  </body>
+</html>`;
+
+            await fs.promises.writeFile(htmlFilePath, htmlContent);
+
             for (const property of optimizedMap.properties) {
                 if (property.name === "script") {
-                    property.value = path.relative(distFolder, `${assetsFolder}/${fileName}`);
+                    property.value = path.relative(distFolder, `${assetsFolder}/${htmlFileName}`);
                     break;
                 }
             }
