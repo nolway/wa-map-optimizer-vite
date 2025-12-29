@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.2.0](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.1.31...v1.2.0) (2025-12-29)
+
+
+### Features
+
+* add integration tests and verification script for wa-map-optimizer-vite plugin + contributing guidelines ([fce477a](https://github.com/nolway/wa-map-optimizer-vite/commit/fce477a8a8200a50b441f2163965ccbd651cef02))
+* Wrapping scripts into generated HTML file ([a312628](https://github.com/nolway/wa-map-optimizer-vite/commit/a3126284c1b4fd12eabccdccce4907147f2f89de))
+* Wrapping scripts into generated HTML file ([8b25803](https://github.com/nolway/wa-map-optimizer-vite/commit/8b25803a730fe057ec591a870c57e7bc46b56517))
+
+
+### Bug Fixes
+
+* Correctly handling script name collisions ([9ddf5d8](https://github.com/nolway/wa-map-optimizer-vite/commit/9ddf5d8d77e1e8564f5ea6d589cf73f2b8ed0b6f))
+* Migrating plugin to be compatible with Vite 4 to 7 ([d59a10d](https://github.com/nolway/wa-map-optimizer-vite/commit/d59a10d169172227b39ed25b0498ee29fd23e969))
+
 ## [Unreleased]
 
 ### Added
