@@ -53,6 +53,9 @@ const optimizeOptions: WaMapOptimizerOptions = {
 
 export default defineConfig({
   build: {
+    // Recommended: generate a build manifest so the plugin can
+    // robustly discover the compiled entry files
+    manifest: true,
     rollupOptions: {
       // Expose each Tiled "script" as a named entry so Vite builds hashed assets
       input: {
@@ -111,7 +114,7 @@ vite build
 - getMapsOptimizers returns an array of Vite plugins; during writeBundle each plugin:
   - runs wa-map-optimizer to generate the optimized .tmj and tileset chunks
   - optionally copies the mapImage file next to the optimized map and updates the property
-  - reads the built assets folder (dist/assets) to locate the hashed JS for the declared script
+  - reads the Vite build manifest (dist/manifest.json) to locate the compiled entry for the declared script (falls back to scanning dist/assets)
   - generates an HTML wrapper file that includes the WorkAdventure iframe API and the compiled script
   - rewrites the map "script" property to point to the HTML wrapper file
 
@@ -119,4 +122,5 @@ Notes:
 - The base output folder defaults to dist. You can override via OptimizeOptions.output.path (or WaMapOptimizerOptions.output.path)
 - Tileset names are automatically prefixed with <mapName>-chunk and suffixed with a short shake256 digest
 - The HTML wrapper uses the `playUrl` option (or PLAY_URL env variable, or defaults to https://play.workadventu.re) for the iframe_api.js script
+ - Compatibility: Vite 4+. For best results, enable `build.manifest: true`.
 

@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const distDir = path.join(__dirname, "dist");
 const assetsDir = path.join(distDir, "assets");
 const mapsDir = path.join(distDir, "maps");
+const manifestPath = path.join(distDir, ".vite", "manifest.json");
 
 console.log("🧪 Verifying build output...\n");
 
@@ -57,6 +58,34 @@ if (htmlFiles.length === 0) {
     error("No HTML wrapper files found in dist/assets/");
 } else {
     success(`Found ${htmlFiles.length} HTML wrapper file(s): ${htmlFiles.join(", ")}`);
+}
+
+// Test 4b: Check manifest.json exists and matches outputs
+if (!fs.existsSync(manifestPath)) {
+    error("dist/manifest.json not found (enable build.manifest)");
+} else {
+    success("dist/manifest.json exists");
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    const entries = Object.values(manifest).filter((e) => e && e.isEntry);
+    if (entries.length === 0) {
+        error("No entry found in manifest.json");
+    } else {
+        success(`Manifest lists ${entries.length} entry(ies)`);
+        entries.forEach((entry) => {
+            const jsBasename = path.basename(entry.file);
+            if (!jsFiles.includes(jsBasename)) {
+                error(`Manifest entry file missing in assets: ${jsBasename}`);
+            } else {
+                success(`Manifest entry present: ${jsBasename}`);
+            }
+            const expectedHtml = jsBasename.replace(/\.js$/i, ".html");
+            if (!htmlFiles.includes(expectedHtml)) {
+                error(`No matching HTML for ${jsBasename} (expected: ${expectedHtml})`);
+            } else {
+                success(`HTML wrapper present for ${jsBasename}`);
+            }
+        });
+    }
 }
 
 // Test 5: Verify HTML wrapper content
@@ -165,21 +194,20 @@ if (!fs.existsSync(mapsDir)) {
     }
 }
 
-// Test 8: Check hash matching between JS and HTML files
-jsFiles.forEach((jsFile) => {
-    const hashMatch = jsFile.match(/-([a-fA-F0-9]{8})\.js$/);
-    if (hashMatch) {
-        const hash = hashMatch[1];
-        const scriptName = jsFile.replace(/-[a-fA-F0-9]{8}\.js$/, "");
-        const expectedHtmlFile = `${scriptName}-${hash}.html`;
-
-        if (htmlFiles.includes(expectedHtmlFile)) {
-            success(`Hash matching: ${jsFile} ↔ ${expectedHtmlFile}`);
+// Test 8: Check matching between JS and HTML files via manifest
+if (fs.existsSync(manifestPath)) {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    const entries = Object.values(manifest).filter((e) => e && e.isEntry);
+    entries.forEach((entry) => {
+        const jsBasename = path.basename(entry.file);
+        const expectedHtml = jsBasename.replace(/\.js$/i, ".html");
+        if (htmlFiles.includes(expectedHtml)) {
+            success(`Matching files: ${jsBasename} ↔ ${expectedHtml}`);
         } else {
-            error(`No matching HTML file for ${jsFile} (expected: ${expectedHtmlFile})`);
+            error(`No matching HTML file for ${jsBasename} (expected: ${expectedHtml})`);
         }
-    }
-});
+    });
+}
 
 // Summary
 console.log("\n" + "=".repeat(50));
