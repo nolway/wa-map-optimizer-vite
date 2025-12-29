@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { PluginOption } from "vite";
-import type { Plugin } from "vite";
+import type { Manifest, Plugin } from "vite";
 import { optimize } from "wa-map-optimizer";
 import crypto from "crypto";
 import { ITiledMap } from "@workadventure/tiled-map-type-guard";
@@ -177,8 +177,13 @@ function mapOptimizer(
     playUrl: string,
     scriptPathToAlias: Map<string, string>
 ): Plugin {
+    let resolvedOutDir: string | undefined;
     return {
         name: "map-optimizer",
+        apply: "build",
+        configResolved(config) {
+            resolvedOutDir = path.resolve(config.root, config.build.outDir || baseDistPath);
+        },
         load() {
             this.addWatchFile(mapPath);
         },
@@ -226,18 +231,34 @@ function mapOptimizer(
                 }
             }
 
+            await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
+                fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
+            });
+        },
+        async closeBundle() {
+            const mapName = path.parse(mapPath).name;
+            const mapExtension = path.parse(mapPath).ext;
+            const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
+
+            if (!map?.properties) {
+                return;
+            }
+
+            if (!fs.existsSync(optimizedMapFilePath)) {
+                // If the optimized map is not found, nothing to update.
+                return;
+            }
+
+            const optimizedMapFile = await fs.promises.readFile(optimizedMapFilePath);
+            const optimizedMap = JSON.parse(optimizedMapFile.toString());
             const scriptProperty = map.properties.find((property) => property.name === "script");
 
             if (!scriptProperty || typeof scriptProperty.value !== "string") {
                 return;
             }
 
-            const assetsFolder = `${baseDistPath}/assets`;
-
-            if (!fs.existsSync(assetsFolder)) {
-                throw new Error(`Cannot find ${assetsFolder} assets build folder`);
-            }
-
+            const outDir = resolvedOutDir ?? path.resolve(process.cwd(), baseDistPath);
+            const assetsFolder = path.join(outDir, "assets");
             const scriptAbsolutePath = path.resolve(path.dirname(mapPath), scriptProperty.value);
             const uniqueScriptName = scriptPathToAlias.get(scriptAbsolutePath);
 
@@ -245,25 +266,41 @@ function mapOptimizer(
                 throw new Error(`Cannot find alias for script: ${scriptAbsolutePath}`);
             }
 
-            const escapedScriptName = uniqueScriptName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const fileName = fs
-                .readdirSync(assetsFolder)
-                .find((asset) => asset.match(new RegExp(`^${escapedScriptName}-[a-fA-F0-9]{8}\\.js$`)));
-
-            if (!fileName) {
-                throw new Error(`Undefined ${uniqueScriptName} script file`);
+            // Read manifest and/or scan assets
+            let compiledJsBasename: string | undefined;
+            let manifestPath = path.join(outDir, ".vite", "manifest.json");
+            if (!fs.existsSync(manifestPath)) {
+                // Fallback for Vite 4 and earlier
+                manifestPath = path.join(outDir, "manifest.json");
             }
-            // Extract the hash from the compiled JS filename
-            const hashMatch = fileName.match(/-([a-fA-F0-9]{8})\.js$/);
-            if (!hashMatch) {
-                throw new Error(`Cannot extract hash from ${fileName}`);
+            if (fs.existsSync(manifestPath)) {
+                const manifestRaw = await fs.promises.readFile(manifestPath, "utf-8");
+                const manifest = JSON.parse(manifestRaw) as Manifest;
+                const manifestEntry = Object.values(manifest).find((entry) => {
+                    const file = entry?.file;
+                    if (typeof file !== "string") return false;
+                    const base = path.basename(file);
+                    return base.startsWith(`${uniqueScriptName}-`) && base.endsWith(".js");
+                });
+                if (manifestEntry?.file) {
+                    compiledJsBasename = path.basename(manifestEntry.file);
+                }
             }
-            const hash = hashMatch[1];
 
-            // Generate HTML wrapper file
-            const htmlFileName = `${uniqueScriptName}-${hash}.html`;
+            if (!compiledJsBasename) {
+                const candidate = fs
+                    .readdirSync(assetsFolder)
+                    .find((asset) => asset.startsWith(`${uniqueScriptName}-`) && asset.endsWith(".js"));
+                if (!candidate) {
+                    throw new Error(`Undefined ${uniqueScriptName} script file in ${assetsFolder}`);
+                }
+                compiledJsBasename = candidate;
+            }
+
+            // Generate HTML wrapper file alongside the JS, using same base name
+            const htmlFileName = compiledJsBasename.replace(/\.js$/i, ".html");
             const htmlFilePath = `${assetsFolder}/${htmlFileName}`;
-            const jsRelativePath = `./${fileName}`;
+            const jsRelativePath = `./${compiledJsBasename}`;
 
             // Basic URL validation
             try {
@@ -271,16 +308,7 @@ function mapOptimizer(
             } catch (e) {
                 throw new Error(`Invalid playUrl: ${playUrl}`);
             }
-            const htmlContent = `<!DOCTYPE html>
-<html>
-  <head>
-    <script src="${playUrl}/iframe_api.js"></script>
-    <script src="${jsRelativePath}"></script>
-  </head>
-  <body>
-
-  </body>
-</html>`;
+            const htmlContent = `<!DOCTYPE html>\n<html>\n  <head>\n    <script src="${playUrl}/iframe_api.js"></script>\n    <script src="${jsRelativePath}"></script>\n  </head>\n  <body>\n\n  </body>\n</html>`;
 
             await fs.promises.writeFile(htmlFilePath, htmlContent);
 
@@ -291,9 +319,7 @@ function mapOptimizer(
                 }
             }
 
-            await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
-                fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
-            });
+            await fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
         },
     };
 }

@@ -10,6 +10,7 @@ const optimizeOptions: WaMapOptimizerOptions = {
 
 export default defineConfig({
     build: {
+        manifest: true,
         rollupOptions: {
             input: {
                 ...getMapsScripts(maps),
