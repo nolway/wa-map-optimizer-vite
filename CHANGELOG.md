@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.1](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.0...v1.2.1) (2025-12-30)
+
+
+### Features
+
+* use OIDC npm connection ([2f581b5](https://github.com/nolway/wa-map-optimizer-vite/commit/2f581b56c46bc82f1500a030437735972bdaa5ce))
+
+
+### Miscellaneous Chores
+
+* **master:** release 1.2.1 ([cd5ac9e](https://github.com/nolway/wa-map-optimizer-vite/commit/cd5ac9eeb3e1890f3467134042d364217616f6c7))
+
 ## [1.2.0](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.1.31...v1.2.0) (2025-12-29)
 
 
