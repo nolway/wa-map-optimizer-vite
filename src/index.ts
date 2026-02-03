@@ -292,7 +292,8 @@ function mapOptimizer(
                     .readdirSync(assetsFolder)
                     .find((asset) => asset.startsWith(`${uniqueScriptName}-`) && asset.endsWith(".js"));
                 if (!candidate) {
-                    throw new Error(`Undefined ${uniqueScriptName} script file in ${assetsFolder}`);
+                    console.warn(`Undefined ${uniqueScriptName} script file in ${assetsFolder}`);
+                    return;
                 }
                 compiledJsBasename = candidate;
             }
