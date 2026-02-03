@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.1...v1.2.2) (2026-02-03)
+
+
+### Bug Fixes
+
+* Improve to compile js ([#31](https://github.com/nolway/wa-map-optimizer-vite/issues/31)) ([7297ccd](https://github.com/nolway/wa-map-optimizer-vite/commit/7297ccd80e4dfa041ee4c85d0416434af7749055))
+
 ## [1.2.1](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.0...v1.2.1) (2025-12-30)
 
 
