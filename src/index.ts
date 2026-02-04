@@ -178,11 +178,13 @@ function mapOptimizer(
     scriptPathToAlias: Map<string, string>
 ): Plugin {
     let resolvedOutDir: string | undefined;
+    let resolvedAssetsDir: string | undefined;
     return {
         name: "map-optimizer",
         apply: "build",
         configResolved(config) {
             resolvedOutDir = path.resolve(config.root, config.build.outDir || baseDistPath);
+            resolvedAssetsDir = config.build.assetsDir ?? "assets";
         },
         load() {
             this.addWatchFile(mapPath);
@@ -258,7 +260,8 @@ function mapOptimizer(
             }
 
             const outDir = resolvedOutDir ?? path.resolve(process.cwd(), baseDistPath);
-            const assetsFolder = path.join(outDir, "assets");
+            const assetsDir = resolvedAssetsDir ?? "assets";
+            const assetsFolder = path.join(outDir, assetsDir);
             const scriptAbsolutePath = path.resolve(path.dirname(mapPath), scriptProperty.value);
             const uniqueScriptName = scriptPathToAlias.get(scriptAbsolutePath);
 
@@ -292,8 +295,7 @@ function mapOptimizer(
                     .readdirSync(assetsFolder)
                     .find((asset) => asset.startsWith(`${uniqueScriptName}-`) && asset.endsWith(".js"));
                 if (!candidate) {
-                    console.warn(`Undefined ${uniqueScriptName} script file in ${assetsFolder}`);
-                    return;
+                    throw new Error(`Undefined ${uniqueScriptName} script file in ${assetsFolder}`);
                 }
                 compiledJsBasename = candidate;
             }
