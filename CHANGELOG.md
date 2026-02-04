@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.2...v1.2.3) (2026-02-04)
+
+
+### Bug Fixes
+
+* assets dir can overrid by vite configuration "assetsDir" ([f1d9eab](https://github.com/nolway/wa-map-optimizer-vite/commit/f1d9eab8a0c1b0910f3c938981a054ea2481fb8d))
+
 ## [1.2.2](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.1...v1.2.2) (2026-02-03)
 
 
