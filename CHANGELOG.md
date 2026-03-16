@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.3...v1.2.4) (2026-03-16)
+
+
+### Bug Fixes
+
+* properly await writeFile after mkdir in writeBundle to eliminate race condition ([f696aa1](https://github.com/nolway/wa-map-optimizer-vite/commit/f696aa1e9a7ef974f5be229ca6e7e8e136a4f130))
+
 ## [1.2.3](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.2...v1.2.3) (2026-02-04)
 
 
