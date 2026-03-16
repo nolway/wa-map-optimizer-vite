@@ -36,12 +36,12 @@ function isMapFile(filePath: string): ITiledMap | undefined {
         return undefined;
     }
 
-    let object = undefined;
+    let object: unknown;
 
     try {
         object = JSON.parse(fs.readFileSync(filePath).toString());
     } catch (error) {
-        throw new Error(`Error on ${filePath} map file: ${error}`);
+        throw new Error(`Error on ${filePath} map file`, { cause: error });
     }
 
     const mapFile = ITiledMap.safeParse(object);
@@ -209,9 +209,17 @@ function mapOptimizer(
             }
 
             const optimizedMapFile = await fs.promises.readFile(optimizedMapFilePath);
-            const optimizedMap = JSON.parse(optimizedMapFile.toString());
+            const optimizedMapObject: unknown = JSON.parse(optimizedMapFile.toString());
+            const optimizedMapResult = ITiledMap.safeParse(optimizedMapObject);
 
-            if (!optimizedMap?.properties) {
+            if (!optimizedMapResult.success) {
+                throw new Error(`Optimized map file is invalid: ${optimizedMapFilePath}`, {
+                    cause: optimizedMapResult.error,
+                });
+            }
+            const optimizedMap = optimizedMapResult.data;
+
+            if (!optimizedMap.properties) {
                 throw new Error("Undefined properties on map optimized! Something was wrong!");
             }
 
@@ -251,7 +259,20 @@ function mapOptimizer(
             }
 
             const optimizedMapFile = await fs.promises.readFile(optimizedMapFilePath);
-            const optimizedMap = JSON.parse(optimizedMapFile.toString());
+            const optimizedMapObject: unknown = JSON.parse(optimizedMapFile.toString());
+            const optimizedMapResult = ITiledMap.safeParse(optimizedMapObject);
+
+            if (!optimizedMapResult.success) {
+                throw new Error(`Optimized map file is invalid: ${optimizedMapFilePath}`, {
+                    cause: optimizedMapResult.error,
+                });
+            }
+            const optimizedMap = optimizedMapResult.data;
+
+            if (!optimizedMap.properties) {
+                throw new Error("Undefined properties on map optimized! Something was wrong!");
+            }
+
             const scriptProperty = map.properties.find((property) => property.name === "script");
 
             if (!scriptProperty || typeof scriptProperty.value !== "string") {
@@ -307,8 +328,8 @@ function mapOptimizer(
             // Basic URL validation
             try {
                 new URL(playUrl);
-            } catch (e) {
-                throw new Error(`Invalid playUrl: ${playUrl}`);
+            } catch (error) {
+                throw new Error(`Invalid playUrl: ${playUrl}`, { cause: error });
             }
             const htmlContent = `<!DOCTYPE html>\n<html>\n  <head>\n    <script src="${playUrl}/iframe_api.js"></script>\n    <script src="${jsRelativePath}"></script>\n  </head>\n  <body>\n\n  </body>\n</html>`;
 
