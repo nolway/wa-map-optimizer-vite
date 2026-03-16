@@ -233,9 +233,8 @@ function mapOptimizer(
                 }
             }
 
-            await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true }).then(() => {
-                fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
-            });
+            await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true });
+            await fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
         },
         async closeBundle() {
             const mapName = path.parse(mapPath).name;
