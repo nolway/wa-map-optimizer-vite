@@ -331,7 +331,7 @@ function mapOptimizer(
             } catch (error) {
                 throw new Error(`Invalid playUrl: ${playUrl}`, { cause: error });
             }
-            const htmlContent = `<!DOCTYPE html>\n<html>\n  <head>\n    <script src="${playUrl}/iframe_api.js"></script>\n    <script src="${jsRelativePath}"></script>\n  </head>\n  <body>\n\n  </body>\n</html>`;
+            const htmlContent = `<!DOCTYPE html>\n<html>\n  <head>\n    <script src="${playUrl}/iframe_api.js"></script>\n    <script src="${jsRelativePath}" type="module"></script>\n  </head>\n  <body>\n\n  </body>\n</html>`;
 
             await fs.promises.writeFile(htmlFilePath, htmlContent);
 
