@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.5](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.4...v1.2.5) (2026-06-02)
+
+
+### Bug Fixes
+
+* Load JS as module ([#38](https://github.com/nolway/wa-map-optimizer-vite/issues/38)) ([c2954bd](https://github.com/nolway/wa-map-optimizer-vite/commit/c2954bdc5eac975af0ceda55dc6afede31be360f))
+
 ## [1.2.4](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.3...v1.2.4) (2026-03-16)
 
 
