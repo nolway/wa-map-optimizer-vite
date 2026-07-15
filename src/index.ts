@@ -280,6 +280,15 @@ function mapOptimizer(
             resolvedOutDir = path.resolve(config.root, config.build.outDir || baseDistPath);
             resolvedAssetsDir = config.build.assetsDir ?? "assets";
         },
+        buildStart() {
+            // Reset the shared report at the start of every build cycle so that
+            // watch-mode rebuilds (which reuse these plugin instances) don't
+            // carry over stale errors or an already-satisfied completion count.
+            // buildStart runs for every plugin before any writeBundle, so these
+            // idempotent resets are safe even though the state is shared.
+            report.completed = 0;
+            report.errors.length = 0;
+        },
         load() {
             this.addWatchFile(mapPath);
         },
