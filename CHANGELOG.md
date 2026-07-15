@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.5...v1.3.0) (2026-07-15)
+
+
+### Features
+
+* upgrade wa-map-optimizer to 2.0.1 ([6cf446b](https://github.com/nolway/wa-map-optimizer-vite/commit/6cf446bcbf2110bf3b7433a5886d0a49adf2d0d7))
+
 ## [1.2.5](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.4...v1.2.5) (2026-06-02)
 
 
