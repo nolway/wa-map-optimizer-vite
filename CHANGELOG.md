@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.3.0...v1.3.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* continue optimizing all maps and report errors per map ([#42](https://github.com/nolway/wa-map-optimizer-vite/issues/42)) ([8d17389](https://github.com/nolway/wa-map-optimizer-vite/commit/8d17389286cd35eb5de8d68af5ea997ad4c6370d))
+
 ## [1.3.0](https://github.com/nolway/wa-map-optimizer-vite/compare/v1.2.5...v1.3.0) (2026-07-15)
 
 
