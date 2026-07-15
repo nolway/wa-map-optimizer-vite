@@ -12,6 +12,90 @@ export type WaMapOptimizerOptions = {
     playUrl?: string;
 } & OptimizeOptions;
 
+// Shared state used to accumulate optimization errors across every map plugin
+// so that the build can process all maps and print a single report at the end.
+type OptimizationError = {
+    mapPath: string;
+    error: unknown;
+};
+
+type OptimizationReport = {
+    total: number;
+    completed: number;
+    errors: OptimizationError[];
+};
+
+// Short, single-line description of an error, used for the live progress logs.
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
+// Full description of an error, preserving the stack trace and the whole
+// `cause` chain so no debugging information is lost in the final report.
+function formatError(error: unknown, indent = "      "): string {
+    if (!(error instanceof Error)) {
+        return indent + String(error);
+    }
+
+    const lines = (error.stack ?? `${error.name}: ${error.message}`).split("\n").map((line) => indent + line);
+
+    let result = lines.join("\n");
+
+    if (error.cause !== undefined) {
+        result += "\n" + indent + "Caused by:\n" + formatError(error.cause, indent + "  ");
+    }
+
+    return result;
+}
+
+function printOptimizationReport(report: OptimizationReport): void {
+    const failedByMap = new Map<string, unknown[]>();
+    for (const { mapPath, error } of report.errors) {
+        const errors = failedByMap.get(mapPath) ?? [];
+        errors.push(error);
+        failedByMap.set(mapPath, errors);
+    }
+
+    const failedCount = failedByMap.size;
+    const successCount = report.total - failedCount;
+
+    console.log("");
+    console.log("========================================");
+    console.log(" Map optimization report");
+    console.log("========================================");
+    console.log(`  ${report.total} map(s) processed, ${successCount} succeeded, ${failedCount} failed.`);
+
+    if (failedCount === 0) {
+        console.log("  ✓ All maps optimized successfully.");
+        console.log("");
+        return;
+    }
+
+    console.log("");
+    console.error(`  ✗ ${failedCount} map(s) failed to optimize:`);
+    for (const [mapPath, errors] of failedByMap) {
+        console.error("");
+        console.error(`  • ${mapPath}`);
+        for (const error of errors) {
+            console.error(formatError(error));
+        }
+    }
+    console.log("");
+}
+
+// Records an error against the given map and, once every map plugin has
+// finished, prints the aggregated report and fails the build if needed.
+function finishOptimization(report: OptimizationReport): void {
+    printOptimizationReport(report);
+
+    const failedMaps = new Set(report.errors.map(({ mapPath }) => mapPath));
+    if (failedMaps.size > 0) {
+        throw new Error(
+            `Map optimization failed for ${failedMaps.size} map(s). See the map optimization report above for details.`
+        );
+    }
+}
+
 export function getMaps(mapDirectory = "."): Map<string, ITiledMap> {
     let mapFiles = new Map<string, ITiledMap>();
 
@@ -119,6 +203,14 @@ export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: WaMapO
     // Get the script path to alias mapping
     const { scriptPathToAlias } = getMapsScriptsWithAliases(maps);
 
+    // Shared report accumulating errors across every map so that a failing map
+    // does not abort the whole build. The last plugin to finish prints it.
+    const report: OptimizationReport = {
+        total: maps.size,
+        completed: 0,
+        errors: [],
+    };
+
     for (const [mapPath, map] of maps) {
         const parsedMapPath = path.parse(mapPath);
         const mapName = parsedMapPath.name;
@@ -159,7 +251,8 @@ export function getMapsOptimizers(maps: Map<string, ITiledMap>, options?: WaMapO
                 structuredClone(optionsParsed),
                 baseDistPath,
                 playUrl,
-                scriptPathToAlias
+                scriptPathToAlias,
+                report
             )
         );
     }
@@ -175,7 +268,8 @@ function mapOptimizer(
     optimizeOptions: OptimizeOptions,
     baseDistPath: string,
     playUrl: string,
-    scriptPathToAlias: Map<string, string>
+    scriptPathToAlias: Map<string, string>,
+    report: OptimizationReport
 ): Plugin {
     let resolvedOutDir: string | undefined;
     let resolvedAssetsDir: string | undefined;
@@ -186,163 +280,192 @@ function mapOptimizer(
             resolvedOutDir = path.resolve(config.root, config.build.outDir || baseDistPath);
             resolvedAssetsDir = config.build.assetsDir ?? "assets";
         },
+        buildStart() {
+            // Reset the shared report at the start of every build cycle so that
+            // watch-mode rebuilds (which reuse these plugin instances) don't
+            // carry over stale errors or an already-satisfied completion count.
+            // buildStart runs for every plugin before any writeBundle, so these
+            // idempotent resets are safe even though the state is shared.
+            report.completed = 0;
+            report.errors.length = 0;
+        },
         load() {
             this.addWatchFile(mapPath);
         },
         async writeBundle() {
-            await optimize(mapPath, optimizeOptions);
+            try {
+                await optimize(mapPath, optimizeOptions);
 
-            const mapName = path.parse(mapPath).name;
-            const mapExtension = path.parse(mapPath).ext;
-            const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
+                const mapName = path.parse(mapPath).name;
+                const mapExtension = path.parse(mapPath).ext;
+                const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
 
-            if (!map?.properties) {
-                return;
-            }
+                if (!map?.properties) {
+                    return;
+                }
 
-            if (!fs.existsSync(distFolder)) {
-                throw new Error(`Cannot find ${distFolder} build folder`);
-            }
+                if (!fs.existsSync(distFolder)) {
+                    throw new Error(`Cannot find ${distFolder} build folder`);
+                }
 
-            if (!fs.existsSync(optimizedMapFilePath)) {
-                throw new Error(`Unknown optimized map file on: ${optimizedMapFilePath}`);
-            }
+                if (!fs.existsSync(optimizedMapFilePath)) {
+                    throw new Error(`Unknown optimized map file on: ${optimizedMapFilePath}`);
+                }
 
-            const optimizedMapFile = await fs.promises.readFile(optimizedMapFilePath);
-            const optimizedMapObject: unknown = JSON.parse(optimizedMapFile.toString());
-            const optimizedMapResult = ITiledMap.safeParse(optimizedMapObject);
+                const optimizedMapFile = await fs.promises.readFile(optimizedMapFilePath);
+                const optimizedMapObject: unknown = JSON.parse(optimizedMapFile.toString());
+                const optimizedMapResult = ITiledMap.safeParse(optimizedMapObject);
 
-            if (!optimizedMapResult.success) {
-                throw new Error(`Optimized map file is invalid: ${optimizedMapFilePath}`, {
-                    cause: optimizedMapResult.error,
-                });
-            }
-            const optimizedMap = optimizedMapResult.data;
+                if (!optimizedMapResult.success) {
+                    throw new Error(`Optimized map file is invalid: ${optimizedMapFilePath}`, {
+                        cause: optimizedMapResult.error,
+                    });
+                }
+                const optimizedMap = optimizedMapResult.data;
 
-            if (!optimizedMap.properties) {
-                throw new Error("Undefined properties on map optimized! Something was wrong!");
-            }
+                if (!optimizedMap.properties) {
+                    throw new Error("Undefined properties on map optimized! Something was wrong!");
+                }
 
-            const imageProperty = map.properties.find((property) => property.name === "mapImage");
+                const imageProperty = map.properties.find((property) => property.name === "mapImage");
 
-            if (imageProperty && typeof imageProperty.value === "string" && imageProperty.value !== "") {
-                const imagePath = path.resolve(path.dirname(mapPath), imageProperty.value);
+                if (imageProperty && typeof imageProperty.value === "string" && imageProperty.value !== "") {
+                    const imagePath = path.resolve(path.dirname(mapPath), imageProperty.value);
 
-                if (fs.existsSync(imagePath)) {
-                    const newMapImageName = `${mapName}${path.parse(imagePath).ext}`;
-                    await fs.promises.copyFile(imagePath, `${distFolder}/${newMapImageName}`);
+                    if (fs.existsSync(imagePath)) {
+                        const newMapImageName = `${mapName}${path.parse(imagePath).ext}`;
+                        await fs.promises.copyFile(imagePath, `${distFolder}/${newMapImageName}`);
 
-                    for (const property of optimizedMap.properties) {
-                        if (property.name === "mapImage") {
-                            property.value = newMapImageName;
-                            break;
+                        for (const property of optimizedMap.properties) {
+                            if (property.name === "mapImage") {
+                                property.value = newMapImageName;
+                                break;
+                            }
                         }
                     }
                 }
-            }
 
-            await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true });
-            await fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
+                await fs.promises.mkdir(path.dirname(optimizedMapFilePath), { recursive: true });
+                await fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
+            } catch (error) {
+                // Record the failure and keep going so that every map is
+                // processed; the aggregated report is printed in closeBundle.
+                console.error(`[map-optimizer] Optimization failed for ${mapPath}: ${errorMessage(error)}`);
+                report.errors.push({ mapPath, error });
+            }
         },
         async closeBundle() {
-            const mapName = path.parse(mapPath).name;
-            const mapExtension = path.parse(mapPath).ext;
-            const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
-
-            if (!map?.properties) {
-                return;
-            }
-
-            if (!fs.existsSync(optimizedMapFilePath)) {
-                // If the optimized map is not found, nothing to update.
-                return;
-            }
-
-            const optimizedMapFile = await fs.promises.readFile(optimizedMapFilePath);
-            const optimizedMapObject: unknown = JSON.parse(optimizedMapFile.toString());
-            const optimizedMapResult = ITiledMap.safeParse(optimizedMapObject);
-
-            if (!optimizedMapResult.success) {
-                throw new Error(`Optimized map file is invalid: ${optimizedMapFilePath}`, {
-                    cause: optimizedMapResult.error,
-                });
-            }
-            const optimizedMap = optimizedMapResult.data;
-
-            if (!optimizedMap.properties) {
-                throw new Error("Undefined properties on map optimized! Something was wrong!");
-            }
-
-            const scriptProperty = map.properties.find((property) => property.name === "script");
-
-            if (!scriptProperty || typeof scriptProperty.value !== "string") {
-                return;
-            }
-
-            const outDir = resolvedOutDir ?? path.resolve(process.cwd(), baseDistPath);
-            const assetsDir = resolvedAssetsDir ?? "assets";
-            const assetsFolder = path.join(outDir, assetsDir);
-            const scriptAbsolutePath = path.resolve(path.dirname(mapPath), scriptProperty.value);
-            const uniqueScriptName = scriptPathToAlias.get(scriptAbsolutePath);
-
-            if (!uniqueScriptName) {
-                throw new Error(`Cannot find alias for script: ${scriptAbsolutePath}`);
-            }
-
-            // Read manifest and/or scan assets
-            let compiledJsBasename: string | undefined;
-            let manifestPath = path.join(outDir, ".vite", "manifest.json");
-            if (!fs.existsSync(manifestPath)) {
-                // Fallback for Vite 4 and earlier
-                manifestPath = path.join(outDir, "manifest.json");
-            }
-            if (fs.existsSync(manifestPath)) {
-                const manifestRaw = await fs.promises.readFile(manifestPath, "utf-8");
-                const manifest = JSON.parse(manifestRaw) as Manifest;
-                const manifestEntry = Object.values(manifest).find((entry) => {
-                    const file = entry?.file;
-                    if (typeof file !== "string") return false;
-                    const base = path.basename(file);
-                    return base.startsWith(`${uniqueScriptName}-`) && base.endsWith(".js");
-                });
-                if (manifestEntry?.file) {
-                    compiledJsBasename = path.basename(manifestEntry.file);
-                }
-            }
-
-            if (!compiledJsBasename) {
-                const candidate = fs
-                    .readdirSync(assetsFolder)
-                    .find((asset) => asset.startsWith(`${uniqueScriptName}-`) && asset.endsWith(".js"));
-                if (!candidate) {
-                    throw new Error(`Undefined ${uniqueScriptName} script file in ${assetsFolder}`);
-                }
-                compiledJsBasename = candidate;
-            }
-
-            // Generate HTML wrapper file alongside the JS, using same base name
-            const htmlFileName = compiledJsBasename.replace(/\.js$/i, ".html");
-            const htmlFilePath = `${assetsFolder}/${htmlFileName}`;
-            const jsRelativePath = `./${compiledJsBasename}`;
-
-            // Basic URL validation
             try {
-                new URL(playUrl);
+                const mapName = path.parse(mapPath).name;
+                const mapExtension = path.parse(mapPath).ext;
+                const optimizedMapFilePath = `${distFolder}/${mapName}${mapExtension}`;
+
+                if (!map?.properties) {
+                    return;
+                }
+
+                if (!fs.existsSync(optimizedMapFilePath)) {
+                    // If the optimized map is not found, nothing to update.
+                    return;
+                }
+
+                const optimizedMapFile = await fs.promises.readFile(optimizedMapFilePath);
+                const optimizedMapObject: unknown = JSON.parse(optimizedMapFile.toString());
+                const optimizedMapResult = ITiledMap.safeParse(optimizedMapObject);
+
+                if (!optimizedMapResult.success) {
+                    throw new Error(`Optimized map file is invalid: ${optimizedMapFilePath}`, {
+                        cause: optimizedMapResult.error,
+                    });
+                }
+                const optimizedMap = optimizedMapResult.data;
+
+                if (!optimizedMap.properties) {
+                    throw new Error("Undefined properties on map optimized! Something was wrong!");
+                }
+
+                const scriptProperty = map.properties.find((property) => property.name === "script");
+
+                if (!scriptProperty || typeof scriptProperty.value !== "string") {
+                    return;
+                }
+
+                const outDir = resolvedOutDir ?? path.resolve(process.cwd(), baseDistPath);
+                const assetsDir = resolvedAssetsDir ?? "assets";
+                const assetsFolder = path.join(outDir, assetsDir);
+                const scriptAbsolutePath = path.resolve(path.dirname(mapPath), scriptProperty.value);
+                const uniqueScriptName = scriptPathToAlias.get(scriptAbsolutePath);
+
+                if (!uniqueScriptName) {
+                    throw new Error(`Cannot find alias for script: ${scriptAbsolutePath}`);
+                }
+
+                // Read manifest and/or scan assets
+                let compiledJsBasename: string | undefined;
+                let manifestPath = path.join(outDir, ".vite", "manifest.json");
+                if (!fs.existsSync(manifestPath)) {
+                    // Fallback for Vite 4 and earlier
+                    manifestPath = path.join(outDir, "manifest.json");
+                }
+                if (fs.existsSync(manifestPath)) {
+                    const manifestRaw = await fs.promises.readFile(manifestPath, "utf-8");
+                    const manifest = JSON.parse(manifestRaw) as Manifest;
+                    const manifestEntry = Object.values(manifest).find((entry) => {
+                        const file = entry?.file;
+                        if (typeof file !== "string") return false;
+                        const base = path.basename(file);
+                        return base.startsWith(`${uniqueScriptName}-`) && base.endsWith(".js");
+                    });
+                    if (manifestEntry?.file) {
+                        compiledJsBasename = path.basename(manifestEntry.file);
+                    }
+                }
+
+                if (!compiledJsBasename) {
+                    const candidate = fs
+                        .readdirSync(assetsFolder)
+                        .find((asset) => asset.startsWith(`${uniqueScriptName}-`) && asset.endsWith(".js"));
+                    if (!candidate) {
+                        throw new Error(`Undefined ${uniqueScriptName} script file in ${assetsFolder}`);
+                    }
+                    compiledJsBasename = candidate;
+                }
+
+                // Generate HTML wrapper file alongside the JS, using same base name
+                const htmlFileName = compiledJsBasename.replace(/\.js$/i, ".html");
+                const htmlFilePath = `${assetsFolder}/${htmlFileName}`;
+                const jsRelativePath = `./${compiledJsBasename}`;
+
+                // Basic URL validation
+                try {
+                    new URL(playUrl);
+                } catch (error) {
+                    throw new Error(`Invalid playUrl: ${playUrl}`, { cause: error });
+                }
+                const htmlContent = `<!DOCTYPE html>\n<html>\n  <head>\n    <script src="${playUrl}/iframe_api.js"></script>\n    <script src="${jsRelativePath}" type="module"></script>\n  </head>\n  <body>\n\n  </body>\n</html>`;
+
+                await fs.promises.writeFile(htmlFilePath, htmlContent);
+
+                for (const property of optimizedMap.properties) {
+                    if (property.name === "script") {
+                        property.value = path.relative(distFolder, `${assetsFolder}/${htmlFileName}`);
+                        break;
+                    }
+                }
+
+                await fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
             } catch (error) {
-                throw new Error(`Invalid playUrl: ${playUrl}`, { cause: error });
-            }
-            const htmlContent = `<!DOCTYPE html>\n<html>\n  <head>\n    <script src="${playUrl}/iframe_api.js"></script>\n    <script src="${jsRelativePath}" type="module"></script>\n  </head>\n  <body>\n\n  </body>\n</html>`;
-
-            await fs.promises.writeFile(htmlFilePath, htmlContent);
-
-            for (const property of optimizedMap.properties) {
-                if (property.name === "script") {
-                    property.value = path.relative(distFolder, `${assetsFolder}/${htmlFileName}`);
-                    break;
+                console.error(`[map-optimizer] Post-processing failed for ${mapPath}: ${errorMessage(error)}`);
+                report.errors.push({ mapPath, error });
+            } finally {
+                // closeBundle runs once per map after every writeBundle has
+                // completed. The last map to reach this point prints the
+                // aggregated report and fails the build if any map errored.
+                report.completed++;
+                if (report.completed >= report.total) {
+                    finishOptimization(report);
                 }
             }
-
-            await fs.promises.writeFile(optimizedMapFilePath, JSON.stringify(optimizedMap));
         },
     };
 }

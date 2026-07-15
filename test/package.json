@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "test": "node verify-build.js"
+        "test": "node verify-build.js && node verify-failing-build.js"
     },
     "devDependencies": {
         "vite": "^6.0.0",
